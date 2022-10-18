@@ -1067,8 +1067,6 @@ FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
             	STORE sales_table_cv_p2 INTO [lib://BnM/2.QVD/app_loads/daily_sales_records/daily_sales_records_(vl_lastappdatetoload_YYYYMMDD).qvd](qvd);
             
             	CONCATENATE (sales_table) LOAD * RESIDENT sales_table_cv_p3; DROP TABLE sales_table_cv_p3;
-///$tab testing gittoqlik
-// testing testing testing
 ///$tab ======================
 
 ///$tab ux_period_select
