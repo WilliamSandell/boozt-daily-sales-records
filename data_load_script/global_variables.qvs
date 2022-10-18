@@ -1,0 +1,33 @@
+///$tab global_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// global_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+global_variables_db_output: NoConcatenate load distinct 
+	variable_name,
+    variable_value
+FROM [lib://Google Drive/B&M/variables/global_variables.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+//store global_variables_db_output into [lib://BnM/2.QVD/Items/variables/global_variables.qvd];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    Let vL_RowNumber_2 = NoOfRows('global_variables_db_output');
+    
+
+    For i = 1 to $(vL_RowNumber_2) 
+//     For i = 1 to '1' // debug setting
+    
+    let vl_field_name = peek('variable_name',$(i)-1,'global_variables_db_output');
+    let vl_field_value = peek('variable_value',$(i)-1,'global_variables_db_output');
+	let $(vl_field_name) = '$(vl_field_value)';
+	
+    TRACE $(i) - $(vL_RowNumber_2);
+
+Next i;
+
+// drop table global_variables_db_output;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////

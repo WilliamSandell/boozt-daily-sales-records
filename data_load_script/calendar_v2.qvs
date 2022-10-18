@@ -1,0 +1,279 @@
+///$tab calendar_v2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// calendar_v2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////
+// Calendar 2.0 by William Sandell. 
+//
+// Works based on two main time variables, vl_firstappdatetoload and vl_lastappdatetoload which are defined in a prior section of the script.
+// Built to be modular so that counter tables can be added and removed based on the current need of the app. This is dictated by simple YES/NO statements
+// found in later parts of the plugin script.
+// Contains timespan measurements which run on a similar Yes/No scheme, which can be utilized front-end to quickly get measures within a predefined
+// period of time.
+////////////////////////////////////////
+
+// Define calendar start and end date based on global app time scope
+
+LET vl_calendar_startdate			= '$(vl_firstappdatetoload_YYYY_MM_DD)';
+LET vl_calendar_enddate				= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Datestamps
+LET vl_currentdate					= Date(Addyears('$(vl_calendar_enddate)',-0),'YYYY-MM-DD');
+LET vl_currentdate_ly				= Date(Addyears('$(vl_calendar_enddate)',-1),'YYYY-MM-DD');
+	// Yearstamps
+	LET vl_currentyear					= Date(AddYears(Year('$(vl_calendar_enddate)'),-0),'YYYY');
+    LET vl_lastyear						= Date(AddYears(Year('$(vl_calendar_enddate)'),-1),'YYYY');
+    	// Timespan
+		LET vl_timespan_years					= Year('$(vl_calendar_enddate)')-Year('$(vl_calendar_startdate)');
+        LET vl_timespan_months					= Month('$(vl_calendar_enddate)')-Month('$(vl_calendar_startdate)');
+        LET vl_timespan_weeks					= Week('$(vl_calendar_enddate)')-Week('$(vl_calendar_startdate)');
+        LET vl_timespan_days					= Num('$(vl_calendar_enddate)')-Num('$(vl_calendar_startdate)');
+
+// Days til end of the month
+LET vl_days_to_end			= Num(Monthend('$(vl_calendar_enddate)'))-Num('$(vl_calendar_enddate)');
+LET vl_ytd_ly				= Num(Addyears('$(vl_calendar_enddate)',-1));			// Used for timespan measurements
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+calendar:
+LOAD
+	*,
+	Year(transaction_date)												AS year,
+    Month(transaction_date)												AS month,
+		Num(Month(transaction_date))									AS month_num,
+    Num(Week(transaction_date))											AS week,
+    Day(transaction_date)												AS day,
+    	Week(transaction_date)&'-'&Weekday(transaction_date)			AS week_day,
+ 	Weekday(transaction_date)											AS weekday,
+ 
+        
+	Year(transaction_date)&Num(Month(transaction_date))					AS year_month,
+    	Year(transaction_date)&Num(Month(transaction_date),00)			AS year_month_I,
+        Year(transaction_date)&'-'&Num(Month(transaction_date),00)		AS year_month_II,
+
+	Dual(WeekYear(transaction_date)&Num(Week(transaction_date),00),WeekYear(transaction_date)&Num(Week(transaction_date),00))					AS year_week,
+    	Dual(WeekYear(transaction_date)&'W'&num(Week(transaction_date),00),WeekYear(transaction_date)&num(Week(transaction_date),00)) 			AS year_week_II,
+
+	Dual('Q'&Num(Ceil(Num(Month(transaction_date))/3)),Num(Ceil(Num(Month(transaction_date))/3),00))											AS quarter,
+	Year(transaction_date)&Dual('Q'&Num(Ceil(Num(Month(transaction_date))/3)),Num(Ceil(Num(Month(transaction_date))/3),00)) 					AS year_quarter,
+	Year(transaction_date)&Dual('H'&Num(Ceil(Num(Month(transaction_date))/6)),Num(Ceil(Num(Month(transaction_date))/6),00)) 					AS year_half,    
+	
+	If(transaction_date<=$(vl_currentdate),transaction_date)			AS date_II,			// Dates until current date
+        
+////////////////////////////////////////////////////////////////////////////////////////////////////////   
+
+// Year
+
+	If(InYear(transaction_date,'$(vl_currentdate)',-0),'Yes','No')			AS in_ty,			// All dates this year
+	If(InYear(transaction_date,'$(vl_currentdate)',-1),'Yes','No')			AS in_ly,			// All dates last year
+    If(InYearToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No')	AS in_ytd_ty,		// All dates ytd this year
+	If(InYearToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No')	AS in_ytd_ly,		// All dates ytd last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Quarter
+
+	If(InQuarter(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 		AS in_tq_ty,		//  All dates qtd this year
+    If(InQuarter(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 			AS in_tq_ly,		//  All dates qtd last year
+    If(InQuarter(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 		AS in_prv_q_ty,		//  All dates previous quarter this year
+    If(InQuarter(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 			AS in_prv_q_ly,		//  All dates previous quarter last year
+	
+	If(InQuarterToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') AS in_qtd_ty,		//  All dates qtd this year
+	If(InQuarterToDate(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 		AS in_qtd_ly,		//  All dates qtd last year
+	If(InQuarterToDate (transaction_date,'$(vl_currentdate)',-1),'Yes','No')AS in_prv_qtd_ty, 	//  All dates previous qtd this year
+    If(InQuarterToDate (transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 	AS in_prv_qtd_ly, 	//  All dates previous qtd last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Month
+
+	If(InMonth(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 		AS in_tm_ty,		// All dates this month this year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-12),'Yes','No') 		AS in_tm_ly,		// All dates this month last year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 		AS in_prv_m_ty,		// All dates previous month this year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-13),'Yes','No') 		AS in_prv_m_ly,		// All dates previous month last year
+	
+	If(InMonthToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 	AS in_mtd_ty,		// All dates mtd this year
+    If(InMonthToDate(transaction_date,'$(vl_currentdate)',-12),'Yes','No') 	AS in_mtd_ly,		// All dates mtd last year
+	If(InMonthToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 	AS in_prv_mtd_ty,	// All dates previous mtd this year
+    If(InMonthToDate(transaction_date,'$(vl_currentdate)',-13),'Yes','No') 	AS in_prv_mtd_ly,	// All dates previous last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Week
+
+	If(InWeek(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 			AS in_tw_ty,		// All dates this week this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 				AS in_tw_ly,		// All dates this week last year
+    If(InWeek(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 			AS in_prv_w_ty,		// All dates previous week this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 				AS in_prv_w_ly,		// All dates previous week this year
+	If(InWeek(transaction_date,'$(vl_currentdate)',-2),'Yes','No') 			AS in_2w_ago_ty,	// All dates 2 weeks ago this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-2),'Yes','No') 				AS in_2w_ago_ly,	// All dates 2 weeks ago last year
+
+	If(InWeekToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 	AS in_wtd_ty, 		// All dates wtd this year
+    If(InWeekToDate(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 		AS in_wtd_ly,		// All dates wtd last year
+	If(InWeekToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 	AS in_prv_wtd_ty, 	// All dates previous wtd this year
+    If(InWeekToDate(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 		AS in_prv_wtd_ly 	// All dates previous wtd this year
+
+;			// End section 1
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Generate transaction dates for calendar table
+
+LOAD
+ 	Date('$(vl_calendar_startdate)'+(Iterno()-1),'YYYY-MM-DD')			AS transaction_date
+
+	Autogenerate 1
+    
+WHILE Date('$(vl_calendar_startdate)'+(Iterno()-1),'YYYY-MM-DD')<=Date('$(vl_calendar_enddate)')
+
+;			// End section 2
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Choose which counters to include in app
+
+LET vl_want_year_count			= 'YES';
+LET vl_want_quarter_count		= 'YES';
+LET vl_want_week_count			= 'YES';
+LET vl_want_yearmonth_count		= 'YES';
+LET vl_want_yearhalf_count		= 'YES';
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Year counter module
+
+If '$(vl_want_year_count)' = 'YES' then			// Check if module is wanted
+
+// 1
+year_counter_p1:
+LOAD Distinct
+	year
+RESIDENT calendar
+ORDER BY year;
+
+	// 2
+	year_counter:
+	LOAD Distinct
+		year,
+		recno()			AS year_counter
+	RESIDENT year_counter_p1
+	ORDER BY year asc;	
+	DROP TABLE year_counter_p1;
+    
+TRACE Year counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Quarter counter module
+
+If '$(vl_want_quarter_count)' = 'YES' then
+
+// 1
+quarter_counter_p1:
+LOAD Distinct
+	year_quarter
+RESIDENT calendar
+ORDER BY year_quarter;
+
+	// 2
+    quarter_counter:
+    LOAD Distinct
+    	year_quarter,
+        recno()			AS quarter_counter
+	RESIDENT quarter_counter_p1
+    ORDER BY year_quarter asc;
+    DROP TABLE quarter_counter_p1;
+
+TRACE Quarter counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Week counter module
+
+If '$(vl_want_week_count)' = 'YES' then			// Check if module is wanted
+
+// 1
+week_counter_p1:
+LOAD Distinct
+	week
+RESIDENT calendar
+ORDER BY week;
+
+	// 2
+	week_counter:
+	LOAD Distinct
+		week,
+		recno()			AS week_counter
+	RESIDENT week_counter_p1
+	ORDER BY week asc;	
+	DROP TABLE week_counter_p1;
+
+TRACE Week counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Year month counter module
+
+If '$(vl_want_yearmonth_count)' = 'YES' then
+
+// 1
+yearmonth_counter_p1:
+Load distinct
+	year_month,
+	month_num
+RESIDENT calendar
+ORDER BY year_month;
+
+	// 2
+    yearmonth_counter:
+    LOAD Distinct
+    	year_month,
+        month_num			AS month_counter,
+		recno()				AS yearmonth_counter
+	RESIDENT yearmonth_counter_p1
+    ORDER BY year_month asc;
+    DROP TABLE yearmonth_counter_p1;
+
+TRACE Year month counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Halfyear counter module
+
+If '$(vl_want_yearhalf_count)' = 'YES' then
+
+// 1
+yearhalf_counter_p1:
+LOAD Distinct
+	year_half
+RESIDENT calendar
+ORDER BY year_half;
+
+	// 2
+	yearhalf_counter:
+	LOAD Distinct
+		year_half,
+		recno()			AS yearhalf_counter
+	RESIDENT yearhalf_counter_p1
+	ORDER BY year_half asc;	
+	DROP TABLE yearhalf_counter_p1;
+
+TRACE Year half counter loaded;			// Script log statement
+
+end if
+
+// exit Script;			// For testing
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////

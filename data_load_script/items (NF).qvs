@@ -1,0 +1,27 @@
+///$tab items (NF)
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// items
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	items_table:
+	Load
+    	ApplyMap('map_startable_key',"Item SKU",'not mapped')			AS "StarTable BnM Mapping Key",
+		"Item Service Id",
+        "Item EAN Code",
+        "Item EAN Code"													AS "Discount EAN Code",
+        "Item Netsuite Id",
+    	"Item Color Variant Id",
+    	"Item Boozt Season",
+    	"Item Image Link",
+    	"Item SKU",
+    	"Item Display Name",
+    	"Item Product Id",
+    	"Item Color Name",
+    	"Item Sold In",
+    	"Item Brand Name",
+    	"SE Base Price",
+    	"SE Actual Price",
+    	"Item Current Stock"
+	FROM [lib://BnM/2.QVD/Items/Items.qvd] (qvd);
+
+// 		map_image_link_service_id: mapping load "Item Service Id", "Item Image Link" Resident items_p1;

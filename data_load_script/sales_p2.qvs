@@ -1,0 +1,32 @@
+///$tab sales_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table:
+    NoConcatenate LOAD
+    	"Item Service Id",
+        sales_item_service_id,
+		sales_item_color_variant_id,
+    	"Item SKU"													AS sales_item_sku,
+    	transaction_date,
+//     	"StarTable BnM Mapping Key",
+    	stock_season_code,
+//     	stock_season_type,
+//     	stock_collection_code,
+    	sales_store_name,    
+    	sales_country_of_purchase_grouped,
+    	sales_country_of_purchase,
+    	sales_shop_section,
+        sales_order_id,
+    
+        ApplyMap('map_startable_key',"Item SKU",'error')																		AS "StarTable BnM Mapping Key",
+		ApplyMap('mapping_db',sales_season_code,'PRE')																			AS stock_season_type,  
+            
+		(sales_cash_sale_norwegian_customs_amount+sales_cash_sale_cogs_amount+sales_cash_sale_cogs_consignment_amount)			AS sales_cash_sale_total_cogs_amount,
+    	(sales_cash_refund_norwegian_customs_amount+sales_cash_refund_cogs_amount+sales_cash_refund_cogs_consignment_amount)	AS sales_cash_refund_total_cogs_amount,
+		(sales_cash_sale_discount_amount+sales_cash_sale_voucher_amount+sales_cash_sale_purchase_amount_ex_vat)					AS sales_cash_sale_total_purchase_amount_inc_total_discount,
+        (sales_cash_refund_discount_amount+sales_cash_refund_voucher_amount+sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_total_purchase_amount_inc_total_discount
+	RESIDENT sales_table_p1
+    WHERE transaction_date >= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+    DROP TABLE sales_table_p1;

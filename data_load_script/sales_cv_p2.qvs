@@ -1,0 +1,13 @@
+///$tab sales_cv_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_cv_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table_cv_p2:
+    NoConcatenate LOAD
+    	*,
+        ApplyMap('map_startable_key',"Item SKU",'error')			AS "StarTable BnM Mapping Key",
+		ApplyMap('mapping_db',sales_season_code,'PRE')				AS stock_season_type
+	RESIDENT sales_table_cv_p1
+    WHERE transaction_date >= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+    DROP TABLE sales_table_cv_p1;

@@ -1,0 +1,31 @@
+///$tab bnm_mapping
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// bnm_mapping
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	bnm_mapping:
+	LOAD
+    	"StartTable BnM Mapping Key",
+//     	"StarTable Key ProFormaBudget",
+//     	"StarTable Key Budget",
+    	"BnM Brand Id",
+    	"BnM Brand Name",
+    	"BnM Sub Category",
+    	"BnM Category",
+    	"BnM Account Manager",
+    	"BnM Buyer",
+    	"BnM Merchandiser",
+//     	"BnM Junior Merchandiser",
+    	"BnM Brand Group",
+    	"BnM Department Group",
+    	"BnM Department Group Board",
+//     	"Proforma Original Sub Category",
+//     	"BnM Previous Sub Category",
+    	"BnM BIS Vendor Id",
+    	"BnM BIS Vendor Name",
+    	"BnM Business Model",
+    	'Total' as "BnM Total",
+		"BnM Sports Activity"
+	FROM [lib://BnM/2.QVD/Items/Bnm_Mapping.qvd] (qvd);
+
+		map_startable_key: mapping load "Item SKU", "StarTable Key ItemTable" FROM [lib://BnM/2.QVD/Items/StarTableKey_extended.qvd] (qvd);

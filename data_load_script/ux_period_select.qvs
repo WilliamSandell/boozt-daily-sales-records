@@ -1,0 +1,15 @@
+///$tab ux_period_select
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ux_time_select
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// 	LET vPeriodOneStart	= Null();
+//     LET vPeriodOneEnd	= Null();
+//     LET vPeriodTwoStart	= Null();
+//     LET vPeriodTwoEnd	= Null();
+
+	ux_period_select:
+    NoConcatenate LOAD Distinct
+    	transaction_date			AS ux_period_one,
+        transaction_date			AS ux_period_two
+	RESIDENT sales_table;

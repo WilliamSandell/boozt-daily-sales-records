@@ -1,0 +1,96 @@
+///$tab sales_p1
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_p1
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	LET vl_file_dir			= 'lib://BnM/2.QVD/sales_finance/service_id/';											// Change file directory based on your need
+	LET vl_file_name		= 'sales_finance_';																		// Change file name based on your need 
+
+		FOR EACH vl_file IN FILELIST('$(vl_file_dir)'&'$(vl_file_name)'&'*');
+
+			LET vl_filedate = Left(Subfield('$(vl_file)','$(vl_file_name)',2),6);									// Change left value to 10 if file date is denoted as 'YYYY-MM-DD'
+
+			IF (Date('$(vl_filedate)','YYYYMM') >= Date('$(vl_current_month_minus_3)','YYYYMM')) THEN				// Change date format if file date is denoted as 'YYYY-MM-DD'
+
+				TRACE Loading: $(vl_file_name)$(vl_filedate);
+
+				sales_table_p1:
+				LOAD
+            		sales_item_service_id										AS "Item Service Id",
+            		sales_item_service_id,
+            		sales_transaction_type,
+            		sales_store_name,
+            		sales_order_id,
+            		sales_currency,
+            		Capitalize(sales_country_of_purchase)						AS sales_country_of_purchase,
+            		sales_shop_section,
+            		Date(sales_order_transaction_date, 'YYYY-MM-DD')			AS transaction_date,
+            		sales_order_transaction_hour_minute							AS transaction_hour_minute,
+            		sales_order_transaction_hour								AS transaction_hour,
+//             		sales_transaction_date,
+            		sales_exchange_rate,
+            		sales_sales_order_finance_id,
+            		sales_transaction_id,
+            		sales_company_subsidiary,
+            		sales_country_of_purchase_grouped,
+            		sales_payment_method,
+            		sales_service_customer_id,
+            		sales_stock_id,
+            		sales_season_code,
+            		sales_collection_code,
+            		sales_item_price_ex_vat,
+            		sales_item_price_ex_vat_fc,
+            		stock_season_code,
+
+            		sales_voucher_type,
+            		sales_voucher_code,
+
+            		sales_business_model,
+            			If(sales_collection_code<>'$(INSEASON_COLLECTION_1AHEAD)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_TY)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_1AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_2AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_3AGO)','OLD',sales_collection_code)						AS stock_collection_code,
+
+					// Sales figures
+            		If(IsNull((sales_cash_sale_purchase_amount_ex_vat*'1.25')),'0',sales_cash_sale_purchase_amount_ex_vat)   	AS sales_cash_sale_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_discount_amount*'1.25')),'0',sales_cash_sale_discount_amount)          			AS sales_cash_sale_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_voucher_amount*'1.25')),'0',sales_cash_sale_voucher_amount)           			AS sales_cash_sale_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat),'0',sales_cash_sale_purchase_amount_ex_vat)				AS sales_cash_sale_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_discount_amount),'0',sales_cash_sale_discount_amount)								AS sales_cash_sale_discount_amount,
+            		If(IsNull(sales_cash_sale_voucher_amount),'0',sales_cash_sale_voucher_amount)								AS sales_cash_sale_voucher_amount,
+// 					sales_cash_sale_base_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat_fc),'0',sales_cash_sale_purchase_amount_ex_vat_fc)			AS sales_cash_sale_purchase_amount_ex_vat_fc,
+            		If(IsNull(sales_cash_sale_voucher_amount_fc),'0',sales_cash_sale_voucher_amount_fc)							AS sales_cash_sale_voucher_amount_fc,
+            		If(IsNull(sales_cash_sale_discount_amount_fc),'0',sales_cash_sale_discount_amount_fc)						AS sales_cash_sale_discount_amount_fc,
+            		If(IsNull(sales_cash_sale_cogs_amount),'0',sales_cash_sale_cogs_amount)										AS sales_cash_sale_cogs_amount,
+            		If(IsNull(sales_cash_sale_cogs_consignment_amount),'0',sales_cash_sale_cogs_consignment_amount)				AS sales_cash_sale_cogs_consignment_amount,
+            		If(IsNull(sales_cash_sale_norwegian_customs_amount),'0',sales_cash_sale_norwegian_customs_amount)			AS sales_cash_sale_norwegian_customs_amount,
+            		If(IsNull(sales_cash_sale_quantity),'0',sales_cash_sale_quantity)											AS sales_cash_sale_quantity,
+                    
+                    // Refund figures
+                    If(IsNull((sales_cash_refund_purchase_amount_ex_vat*'1.25')),'0',sales_cash_refund_purchase_amount_ex_vat)   	AS sales_cash_refund_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_discount_amount*'1.25')),'0',sales_cash_refund_discount_amount)          			AS sales_cash_refund_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_voucher_amount*'1.25')),'0',sales_cash_refund_voucher_amount)           			AS sales_cash_refund_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_refund_purchase_amount_ex_vat),'0',sales_cash_refund_purchase_amount_ex_vat)				AS sales_cash_refund_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_refund_discount_amount),'0',sales_cash_refund_discount_amount)								AS sales_cash_refund_discount_amount,
+            		If(IsNull(sales_cash_refund_voucher_amount),'0',sales_cash_refund_voucher_amount)								AS sales_cash_refund_voucher_amount,
+            		If(IsNull(sales_cash_refund_cogs_amount),'0',sales_cash_refund_cogs_amount)										AS sales_cash_refund_cogs_amount,
+            		If(IsNull(sales_cash_refund_cogs_consignment_amount),'0',sales_cash_refund_cogs_consignment_amount)				AS sales_cash_refund_cogs_consignment_amount,
+            		If(IsNull(sales_cash_refund_norwegian_customs_amount),'0',sales_cash_refund_norwegian_customs_amount)			AS sales_cash_refund_norwegian_customs_amount,
+            		If(IsNull(sales_cash_refund_quantity),'0',sales_cash_refund_quantity)											AS sales_cash_refund_quantity
+                    
+				FROM $(vl_file)(qvd);
+//         	WHERE EXISTS(load_po,"PO Boozt Order No");
+// WHERE EXISTS(load_sid,sales_item_service_id);
+//     		WHERE EXISTS(load_po,"PO Boozt Order No") AND EXISTS(load_collections,"PO Collection");
+              
+			END IF
+
+		NEXT vl_file
+
+			TRACE Sales file loop 1 completed;
+            
+            	LEFT JOIN (sales_table_p1) LOAD "Item Service Id" AS sales_item_service_id,"Item SKU","Item Color Variant Id" AS sales_item_color_variant_id RESIDENT items_table;

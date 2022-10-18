@@ -1,0 +1,40 @@
+///$tab var_DB_output_ty
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// var_DB_output_ty
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+variables_db_output: NoConcatenate load distinct 
+    variables_name,
+    variable_value
+FROM [lib://BnM/2.QVD/Items/variables/season_code_variables_$(INSEASON_COLLECTION_TY).qvd]
+(qvd);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+mapping_db: MAPPING load
+    sc_season_code,
+    sc_season_code_name
+FROM [lib://BnM/2.QVD/Items/variables/season_type_mapping_$(INSEASON_COLLECTION_TY).qvd]
+(qvd);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    Let vL_RowNumber_2 = NoOfRows('variables_db_output');
+    
+
+    For i = 1 to $(vL_RowNumber_2) 
+//     For i = 1 to '1' // debug setting
+    
+    let vl_field_name = peek('variables_name',$(i)-1,'variables_db_output');
+    let vl_field_value = peek('variable_value',$(i)-1,'variables_db_output');
+	let $(vl_field_name) = '$(vl_field_value)';
+	
+    TRACE $(i) - $(vL_RowNumber_2);
+
+Next i;
+
+Concatenate(global_variables_db_output) load
+    variables_name as variable_name,
+    variable_value
+resident variables_db_output;
+drop table variables_db_output;

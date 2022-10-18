@@ -1,0 +1,70 @@
+///$tab sales_cv_p3
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_cv_p3
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table_cv_p3:
+    NoConcatenate LOAD
+    sales_item_color_variant_id,
+    "Item SKU"													AS sales_item_sku,
+    transaction_date,
+    "StarTable BnM Mapping Key",
+    stock_season_code,
+    stock_season_type,
+    stock_collection_code,
+    sales_store_name,    
+    sales_country_of_purchase_grouped,
+    sales_country_of_purchase,
+    sales_shop_section,
+
+		// Sales figures
+		Sum(sales_cash_sale_purchase_amount_inc_vat)			AS sales_cash_sale_purchase_amount_inc_vat,
+		Sum(sales_cash_sale_voucher_amount_inc_vat)				AS sales_cash_sale_voucher_amount_inc_vat,
+		Sum(sales_cash_sale_discount_amount_inc_vat)			AS sales_cash_sale_discount_amount_inc_vat,
+                    
+		Sum(sales_cash_sale_purchase_amount_ex_vat)				AS sales_cash_sale_purchase_amount_ex_vat,
+		Sum(sales_cash_sale_discount_amount)					AS sales_cash_sale_discount_amount,
+		Sum(sales_cash_sale_voucher_amount)						AS sales_cash_sale_voucher_amount,
+// 		Sum(sales_cash_sale_base_purchase_amount_ex_vat)			AS sales_cash_sale_base_purchase_amount_ex_vat,
+		Sum(sales_cash_sale_purchase_amount_ex_vat_fc)			AS sales_cash_sale_purchase_amount_ex_vat_fc,
+		Sum(sales_cash_sale_voucher_amount_fc)					AS sales_cash_sale_voucher_amount_fc,
+		Sum(sales_cash_sale_discount_amount_fc)					AS sales_cash_sale_discount_amount_fc,
+		Sum(sales_cash_sale_cogs_amount)						AS sales_cash_sale_cogs_amount,
+		Sum(sales_cash_sale_cogs_consignment_amount)			AS sales_cash_sale_cogs_consignment_amount,
+		Sum(sales_cash_sale_norwegian_customs_amount)			AS sales_cash_sale_norwegian_customs_amount,
+		Sum(sales_cash_sale_quantity)							AS sales_cash_sale_quantity,
+        
+        Sum(sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_purchase_amount_ex_vat,
+        Sum(sales_cash_refund_discount_amount)					AS sales_cash_refund_discount_amount,
+        Sum(sales_cash_refund_voucher_amount)					AS sales_cash_refund_voucher_amount,
+                    
+        Sum(sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_purchase_amount_ex_vat,
+        Sum(sales_cash_refund_discount_amount)					AS sales_cash_refund_discount_amount,
+        Sum(sales_cash_refund_voucher_amount)					AS sales_cash_refund_voucher_amount,
+        Sum(sales_cash_refund_cogs_amount)						AS sales_cash_refund_cogs_amount,
+        Sum(sales_cash_refund_cogs_consignment_amount)			AS sales_cash_refund_cogs_consignment_amount,
+        Sum(sales_cash_refund_norwegian_customs_amount)			AS sales_cash_refund_norwegian_customs_amount,
+		Sum(sales_cash_refund_quantity)							AS sales_cash_refund_quantity,
+        
+		(Sum(sales_cash_sale_norwegian_customs_amount)+Sum(sales_cash_sale_cogs_amount)+Sum(sales_cash_sale_cogs_consignment_amount))			AS sales_cash_sale_total_cogs_amount,
+    	(Sum(sales_cash_refund_norwegian_customs_amount)+Sum(sales_cash_refund_cogs_amount)+Sum(sales_cash_refund_cogs_consignment_amount))		AS sales_cash_refund_total_cogs_amount,
+		(Sum(sales_cash_sale_discount_amount)+Sum(sales_cash_sale_voucher_amount)+Sum(sales_cash_sale_purchase_amount_ex_vat))					AS sales_cash_sale_total_purchase_amount_inc_total_discount,
+        (Sum(sales_cash_refund_discount_amount)+Sum(sales_cash_refund_voucher_amount)+Sum(sales_cash_refund_purchase_amount_ex_vat))			AS sales_cash_refund_total_purchase_amount_inc_total_discount
+	RESIDENT sales_table_cv_p2
+    GROUP BY
+        	sales_item_color_variant_id,
+       		transaction_date,
+        	"StarTable BnM Mapping Key",
+        	stock_season_code,
+        	stock_season_type,
+        	stock_collection_code,
+        	sales_store_name,
+        	"Item SKU",
+        	sales_country_of_purchase_grouped,
+        	sales_country_of_purchase,
+        	sales_shop_section;
+	DROP TABLE sales_table_cv_p2;
+            
+            	STORE sales_table_cv_p2 INTO [lib://BnM/2.QVD/app_loads/daily_sales_records/daily_sales_records_(vl_lastappdatetoload_YYYYMMDD).qvd](qvd);
+            
+            	CONCATENATE (sales_table) LOAD * RESIDENT sales_table_cv_p3; DROP TABLE sales_table_cv_p3;

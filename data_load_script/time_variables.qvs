@@ -1,0 +1,19 @@
+///$tab time_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// time_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	LET vl_current_month_minus_0		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-0),'YYYYMM');
+    LET vl_current_month_minus_1		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-1),'YYYYMM');
+    LET vl_current_month_minus_2		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-2),'YYYYMM');
+    LET vl_current_month_minus_3		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-3),'YYYYMM');
+    
+
+	LET vl_firstappdatetoload_YYYYMM 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-37),'YYYYMM');
+    LET vl_lastappdatetoload_YYYYMM 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-0),'YYYYMM');
+    
+    LET vl_firstappdatetoload_YYYYMMDD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMMDD')-1,'YYYYMMDD'),-37),'YYYYMMDD');
+    LET vl_lastappdatetoload_YYYYMMDD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMMDD')-1,'YYYYMMDD'),-0),'YYYYMMDD');
+    
+    LET vl_firstappdatetoload_YYYY_MM_DD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYY-MM-DD')-1,'YYYY-MM-DD'),-37),'YYYY-MM-DD');
+    LET vl_lastappdatetoload_YYYY_MM_DD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYY-MM-DD')-1,'YYYY-MM-DD'),-0),'YYYY-MM-DD');

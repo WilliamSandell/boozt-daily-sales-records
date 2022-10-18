@@ -1,0 +1,293 @@
+///$tab old sales
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//--- Mapping
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+	Map_Cost_Price:
+
+	Mapping
+	LOAD
+		"Item Netsuite Id",
+		"Item Cost in SEK"
+	FROM [lib://Common/2.QVD\Items.qvd]
+	(qvd);
+
+	// -----------------------------------------------------------------------
+    // Consignment Mappings
+	// -----------------------------------------------------------------------
+    
+	Map_Brand_Consignment_Fee:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Brand_Consignment_Fee_EU:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee EU"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Brand_Consignment_Fee_NO:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee NO"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Main_Category:
+	Mapping
+	LOAD
+		"Item Netsuite Id",
+		"Item Main Category"
+	FROM [lib://Common/2.QVD\Items.qvd]
+	(qvd);  	
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//--- Code
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+		// Read stock data for all mondays adding value cost and salesvalue
+		FOR Each File in filelist ('[lib://Common/2.QVD\SalesOrders\*]')
+
+        //------------------------------------------------------------------
+        //
+        // Variable to generate the year month name from the stock file date --> format YYYYMM
+        //
+        //-------------------------------------------------------------------
+
+        let vl.YearMonth = SubField(SubField('$(File)','_',2),'.',1); // in this case the '_' represents the start of the string and the '.' represents the end point (2 stands for all after and 1 for all before )
+
+            if( vl.YearMonth>=vL.YearMonthSalesToLoad) then   //Load only monday stock files
+
+				Sales:
+
+				LOAD
+
+						// ----------------------------------------------
+                        // DIMENSIONS
+                        // ----------------------------------------------
+                        ShopSection,
+                        "Item Netsuite Id",
+                        "Sales Order Discount Percentage" 																	as "Sales Order Discount Percentage",
+						if("Sales Order Brand Business Model" = 'Own Buy', 'OB', 'C') 										as "Sales Order Brand Consignment",
+                        "Sales Order Delivery Country" 																		as "Sales Order Country",
+						  "Sales Order Voucher Code",
+                          "Sales Order Voucher Type",
+                          "Sales Order Currency Code",
+                          "Sales Order Vat Rate",
+                          "Sales Order Currency Rate",
+						  date(round(floor(date("Sales Order Purchase Date")))) 											as FactDate,
+                          // "Transaction Type" AS "Sales Order Transaction Type",
+                          
+                          date(round(floor(date("Sales Order Purchase Date")))) 											as "Sales Order Purchase Date",
+                          "Sales Order EAN Code" 																			as "Sales Order EAN Code",
+                          
+                          "Sales Order Reference Number" 																	as "Sales Order Number",
+                          if(left("Sales Order Reference Number",2) = 'BZ','Boozt',
+                          if(left("Sales Order Reference Number",2) = 'EC','ECCO',
+                          if(left("Sales Order Reference Number",2) = 'OL','Outlet',
+                          if(left("Sales Order Reference Number",2) = 'CO','Stock Take Out for Physical Outlet',
+                          if(left("Sales Order Reference Number",2) = 'DY','Day',
+                          if(left("Sales Order Reference Number",2) = 'RO','Retail Outlet','Not Known')))))) 				as "Sales Order Store",
+                                        
+                      //     Brand as "Sales Order Brand",
+                      //     Gender as "Sales Order Gender",
+                      //     "Product Type" as "Sales Order Product Type",
+                      //     SKU as "Sales Order SKU",
+                      //     "Color" as "Sales Order Product Color",
+                      //     "Product Name" as "Sales Order Product Name",
+                      //     "Season Code" as "Sales Order Season Code",
+                      //     "Brand Season" as "Sales Order Brand Season",
+
+						// ----------------------------------------------
+                        // INC VAT
+                        // ----------------------------------------------
+                        
+
+                          "Sales Order Base Price SEK Ex VAT" * "Sales Order Quantity" 										as "Sales Order Amount in SEK inc. Discount ex VAT",
+                          "Sales Order Quantity" 																			as "Sales Order Quantity",
+                          
+                          
+                          ("Sales Order Actual Price SEK Ex VAT" * 1.25) * "Sales Order Quantity"							as "Sales Order Amount in SEK inc VAT",
+                          ("Sales Order Base Price SEK Ex VAT" * 1.25)  * "Sales Order Quantity"							as "Sales Order Amount in SEK inc. Discount inc VAT",
+
+						  (
+                          	(
+                            	"Sales Order Voucher Value SEK Ex VAT" + 
+                            	"Sales Order Discount Value SEK Ex VAT"
+                            ) * 1.25
+                         ) 																									as "Sales Order Discount Amount in SEK inc VAT",
+						  "Sales Order Voucher Value SEK Ex VAT" * 1.25														as "Sales Order Voucher Value SEK inc VAT",
+                          "Sales Order Discount Value SEK Ex VAT" * 1.25													as "Sales Order Discount Value SEK inc VAT",
+                          
+                          
+
+						"Sales Order Base Price SEK Ex VAT" * "Sales Order Quantity" 										as "Sales Order Gross Revenue Amount",                        
+                          
+
+
+						// ----------------------------------------------
+                        // EX VAT
+                        // ----------------------------------------------
+                        
+						  "Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity" 									as "Sales Order Amount in SEK ex VAT",                          
+                          ("Sales Order Voucher Value SEK Ex VAT" + "Sales Order Discount Value SEK Ex VAT")				as "Sales Order Discount Amount in SEK ex VAT",  
+                          
+                          "Sales Order Voucher Value SEK Ex VAT"						 									as "Sales Order Voucher Value SEK Ex VAT",
+                          "Sales Order Discount Value SEK Ex VAT"						 									as "Sales Order Discount Value SEK Ex VAT",
+                          
+                          
+						// ----------------------------------------------
+                        // FORGEIGN CURRENCY
+                        // ----------------------------------------------
+                          
+                          Round((("Sales Order Discount Value FC")
+                          /
+                          (
+                          	("Sales Order Voucher Value FC" + "Sales Order Discount Value FC")+
+                            "Sales Order Base Price FC Ex VAT" * "Sales Order Quantity"
+                          )),0.05)																							as "Sales Discount Percentage On Site",                          
+                          
+                          "Sales Order Base Price FC" * "Sales Order Quantity"												as "Sales Order Base Price FC",
+                          "Sales Order Actual Price FC" * "Sales Order Quantity"											as "Sales Order Actual Price FC",
+                          "Sales Order Voucher Value FC"																	as "Sales Order Voucher Value FC",
+                          "Sales Order Discount Value FC"																	as "Sales Order Discount Value FC",
+                          "Sales Order Base Price FC Ex VAT" * "Sales Order Quantity"										as "Sales Order Base Price FC Ex VAT",
+                          "Sales Order Actual Price FC Ex VAT" * "Sales Order Quantity"										as "Sales Order Actual Price FC Ex VAT",
+                          "Sales Order Voucher Value FC Ex VAT"																as "Sales Order Voucher Value FC Ex VAT",
+                          "Sales Order Discount Value FC Ex VAT"															as "Sales Order Discount Value FC Ex VAT",
+                          
+                                  
+						// ----------------------------------------------
+                        // COGS calculation
+                        // ----------------------------------------------
+
+                           (
+                            if("Sales Order Brand Business Model" = 'Own Buy',
+                                // TRUE
+                                ApplyMap('Map_Cost_Price', "Item Netsuite Id",null())* "Sales Order Quantity",
+                                // FALSE
+                                0)
+                           )
+
+                           +
+
+                              // =========================================================
+                              //	Calculate Gross Customs Fee
+                              // =========================================================
+
+
+
+                              if("Sales Order Delivery Country"='no',
+                                  // IF TRUE
+                                      if(ApplyMap('Map_Main_Category', "Item Netsuite Id",null())='Shoes',
+                                      // IF TRUE
+                                      0,
+                                      // IF FALSE
+                                          if(ApplyMap('Map_Main_Category', "Item Netsuite Id",null())='Bags',
+                                          // IF TRUE
+                                          0,
+                                          // IF FALSE
+                                          (0.093 * "Sales Order Actual Price SEK Ex VAT") * "Sales Order Quantity"
+                                            ))
+                                      ,0)      
+
+                           +
+
+                              // =========================================================
+                              //	Calculate Gross Cogs Consignment
+                              // =========================================================
+
+                              if("Sales Order Brand Business Model" = 'Consignment'
+                                  // IF TRUE
+                                  ,if("Sales Order Delivery Country"='se' or //sweden
+                                      "Sales Order Delivery Country"='dk' or //denmark
+                                      "Sales Order Delivery Country"='fi' or //finland
+                                      "Sales Order Delivery Country"='nl' or //netherlands
+                                      "Sales Order Delivery Country"='fr' or //france
+                                      "Sales Order Delivery Country"='de' or //germany
+                                      "Sales Order Delivery Country"='be' or //belgium
+                                      "Sales Order Delivery Country"='pl' or //poland
+                                      "Sales Order Delivery Country"='uk' //Great Brittan
+
+                                          //IF TRUE --> Apply General Customers Fee
+                                          ,ApplyMap('Map_Brand_Consignment_Fee', "%Brand Id",null()) *
+
+                                            ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity")
+
+                                           // IF FALSE --> Apply Norway Customs Fee
+                                          ,if("Sales Order Delivery Country"='no'
+                                                // IF TRUE
+                                                ,ApplyMap('Map_Brand_Consignment_Fee_NO', "%Brand Id",null()) *
+
+                                                    ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity")
+
+                                                // IF FALSE
+                                                ,ApplyMap('Map_Brand_Consignment_Fee_EU', "%Brand Id",null()) *
+
+                                                    ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity"))
+                                      )
+                                  // IF FALSE
+                                  ,0)       	as "Sales Order Gross Cost of Goods Sold" 
+								  
+				FROM $(File)
+				(qvd);
+			   end if
+
+		NEXT File
+
+
+            Concatenate (Sales)
+            LOAD
+
+                          "Item Netsuite Id",
+                          Date("Sales Order Purchase Date" + '$(vL.Days.To.Look.Back)' ,'YYYY-MM-DD') as "FactDate",
+                          Date("Sales Order Purchase Date"  + '$(vL.Days.To.Look.Back)','YYYY-MM-DD') as "Sales Order Purchase Date",
+                          "Sales Order EAN Code",
+                          "Sales Order Amount in SEK ex VAT" as "Sales Order Compare Amount in SEK ex VAT",
+                          "Sales Order Quantity" as "Sales Order Compare Quantity",
+                          "Sales Order Amount in SEK inc. Discount ex VAT" as "Sales Order Compare Amount in SEK inc. Discount ex VAT",
+
+						  "Sales Order Gross Revenue Amount" as "Sales Order Compare Gross Revenue Amount",
+                          "Sales Order Brand Consignment" as "Sales Order Brand Consignment",
+                          
+                          "Sales Order Amount in SEK inc VAT" as "Sales Order Compare Amount in SEK inc VAT",
+                          "Sales Order Amount in SEK inc. Discount inc VAT" as "Sales Order Compare Amount in SEK inc. Discount inc VAT",
+						  "Sales Order Discount Amount in SEK inc VAT" as "Sales Order Compare Discount Amount in SEK inc VAT",
+                          "Sales Order Voucher Value SEK inc VAT" as "Sales Order Compare Voucher Value SEK inc VAT",
+                          "Sales Order Discount Value SEK inc VAT" as "Sales Order Compare Discount Value SEK inc VAT",     
+                          
+                          "Sales Order Number",
+						  "Sales Order Store",                          
+                          "Sales Order Country",
+                          "Sales Order Discount Amount in SEK ex VAT" as "Sales Order Compare Discount Amount in SEK ex VAT",
+                          "Sales Order Discount Percentage" as "Sales Order Compare Discount Percentage",
+                          "Sales Order Gross Cost of Goods Sold" as "Sales Order Compare Gross Cost of Goods Sold" 
+               
+                                  
+                                  
+    
+        Resident Sales;// where "FactDate" = '<=$(TodayCurrentData)';
+        
+//         Concatenate (Sales)
+        
+//           LOAD
+//               "Sales Order Purchase Date",
+//               "Sales Order Purchase Date" as "FactDate",
+//               "Events",
+//               "Boozt Forecast",
+//               "Booztlet Forecast",
+//               "ECCO Forecast",
+//               "DAY Forecast"
+//           FROM [lib://Google Drive/B&M\Daily Sales Forecast\Forecast.xlsx]
+//           (ooxml, embedded labels, table is Sheet1);

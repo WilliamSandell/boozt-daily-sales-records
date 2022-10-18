@@ -1,0 +1,33 @@
+///$tab item_discounts
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// item_discounts
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	
+LOAD
+//     "Item Netsuite Id",
+//     "Item Service Id",
+    "Item EAN Code"			AS "Discount EAN Code",
+//     "Item Color Variant Id",
+    "Discount Id",
+    "Discount Name",
+    "Discount Start Date",
+    "Discount End Date",
+    "Discount Start Hour",
+    "Discount End Hour",
+    "Discount Product Id Count",
+    "Discount Mirror Status",
+    "Discount Prioritized",
+    "Discount Approval List",
+    "Discount Read For Approval",
+    "Discount Live",
+    "Discount Last Updated",
+    "Discount Type",
+    "Discount Reduction",
+    "Discount Nice Price",
+    "Discount Deleted",
+    "Discount Campaign Name",
+    "Discount Sold In",
+    "Discount Seasons"
+FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
+(qvd);

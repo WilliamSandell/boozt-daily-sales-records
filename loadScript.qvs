@@ -1,0 +1,1395 @@
+///$tab ======================
+
+///$tab Main
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// main
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SET ThousandSep=' ';
+// SET DecimalSep=',';
+// SET MoneyThousandSep=',';
+// SET MoneyDecimalSep='.';
+// SET MoneyFormat='£#,##0.00;-£#,##0.00';
+// SET TimeFormat='hh:mm:ss';
+// SET DateFormat='YYYY-MM-DD';
+// SET TimestampFormat='YYYY-MM-DD hh:mm:ss[.fff]';
+// SET FirstWeekDay=0;
+// SET BrokenWeeks=0;
+// SET ReferenceDay=4;
+// SET FirstMonthOfYear=1;
+// SET CollationLocale='en-GB';
+// SET MonthNames='Jan;Feb;Mar;Apr;May;Jun;Jul;Aug;Sep;Oct;Nov;Dec';
+// SET LongMonthNames='January;February;March;April;May;June;July;August;September;October;November;December';
+// SET DayNames='Mon;Tue;Wed;Thu;Fri;Sat;Sun';
+// SET LongDayNames='Monday;Tuesday;Wednesday;Thursday;Friday;Saturday;Sunday';
+// SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+
+SET ThousandSep=' ';
+SET DecimalSep=',';
+SET MoneyThousandSep=',';
+SET MoneyDecimalSep='.';
+SET MoneyFormat='£#,##0.00;-£#,##0.00';
+SET TimeFormat='hh:mm:ss';
+SET DateFormat='YYYY-MM-DD';
+SET TimestampFormat='YYYY-MM-DD hh:mm:ss[.fff]';
+SET FirstWeekDay=0;
+SET BrokenWeeks=0;
+SET ReferenceDay=4;
+SET FirstMonthOfYear=1;
+SET CollationLocale='en-GB';
+SET MonthNames='Jan;Feb;Mar;Apr;May;Jun;Jul;Aug;Sep;Oct;Nov;Dec';
+SET LongMonthNames='January;February;March;April;May;June;July;August;September;October;November;December';
+SET DayNames='Mon;Tue;Wed;Thu;Fri;Sat;Sun';
+SET LongDayNames='Monday;Tuesday;Wednesday;Thursday;Friday;Saturday;Sunday';
+SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+///$tab time_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// time_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	LET vl_current_month_minus_0		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-0),'YYYYMM');
+    LET vl_current_month_minus_1		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-1),'YYYYMM');
+    LET vl_current_month_minus_2		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-2),'YYYYMM');
+    LET vl_current_month_minus_3		= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-3),'YYYYMM');
+    
+
+	LET vl_firstappdatetoload_YYYYMM 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-37),'YYYYMM');
+    LET vl_lastappdatetoload_YYYYMM 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMM')-1,'YYYYMM'),-0),'YYYYMM');
+    
+    LET vl_firstappdatetoload_YYYYMMDD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMMDD')-1,'YYYYMMDD'),-37),'YYYYMMDD');
+    LET vl_lastappdatetoload_YYYYMMDD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYYMMDD')-1,'YYYYMMDD'),-0),'YYYYMMDD');
+    
+    LET vl_firstappdatetoload_YYYY_MM_DD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYY-MM-DD')-1,'YYYY-MM-DD'),-37),'YYYY-MM-DD');
+    LET vl_lastappdatetoload_YYYY_MM_DD 	= Date(AddMonths(Date(Date(WeekStart(Today()-0),'YYYY-MM-DD')-1,'YYYY-MM-DD'),-0),'YYYY-MM-DD');
+///$tab global_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// global_variables
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+global_variables_db_output: NoConcatenate load distinct 
+	variable_name,
+    variable_value
+FROM [lib://Google Drive/B&M/variables/global_variables.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+//store global_variables_db_output into [lib://BnM/2.QVD/Items/variables/global_variables.qvd];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    Let vL_RowNumber_2 = NoOfRows('global_variables_db_output');
+    
+
+    For i = 1 to $(vL_RowNumber_2) 
+//     For i = 1 to '1' // debug setting
+    
+    let vl_field_name = peek('variable_name',$(i)-1,'global_variables_db_output');
+    let vl_field_value = peek('variable_value',$(i)-1,'global_variables_db_output');
+	let $(vl_field_name) = '$(vl_field_value)';
+	
+    TRACE $(i) - $(vL_RowNumber_2);
+
+Next i;
+
+// drop table global_variables_db_output;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+///$tab calendar_v2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// calendar_v2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////
+// Calendar 2.0 by William Sandell. 
+//
+// Works based on two main time variables, vl_firstappdatetoload and vl_lastappdatetoload which are defined in a prior section of the script.
+// Built to be modular so that counter tables can be added and removed based on the current need of the app. This is dictated by simple YES/NO statements
+// found in later parts of the plugin script.
+// Contains timespan measurements which run on a similar Yes/No scheme, which can be utilized front-end to quickly get measures within a predefined
+// period of time.
+////////////////////////////////////////
+
+// Define calendar start and end date based on global app time scope
+
+LET vl_calendar_startdate			= '$(vl_firstappdatetoload_YYYY_MM_DD)';
+LET vl_calendar_enddate				= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Datestamps
+LET vl_currentdate					= Date(Addyears('$(vl_calendar_enddate)',-0),'YYYY-MM-DD');
+LET vl_currentdate_ly				= Date(Addyears('$(vl_calendar_enddate)',-1),'YYYY-MM-DD');
+	// Yearstamps
+	LET vl_currentyear					= Date(AddYears(Year('$(vl_calendar_enddate)'),-0),'YYYY');
+    LET vl_lastyear						= Date(AddYears(Year('$(vl_calendar_enddate)'),-1),'YYYY');
+    	// Timespan
+		LET vl_timespan_years					= Year('$(vl_calendar_enddate)')-Year('$(vl_calendar_startdate)');
+        LET vl_timespan_months					= Month('$(vl_calendar_enddate)')-Month('$(vl_calendar_startdate)');
+        LET vl_timespan_weeks					= Week('$(vl_calendar_enddate)')-Week('$(vl_calendar_startdate)');
+        LET vl_timespan_days					= Num('$(vl_calendar_enddate)')-Num('$(vl_calendar_startdate)');
+
+// Days til end of the month
+LET vl_days_to_end			= Num(Monthend('$(vl_calendar_enddate)'))-Num('$(vl_calendar_enddate)');
+LET vl_ytd_ly				= Num(Addyears('$(vl_calendar_enddate)',-1));			// Used for timespan measurements
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+calendar:
+LOAD
+	*,
+	Year(transaction_date)												AS year,
+    Month(transaction_date)												AS month,
+		Num(Month(transaction_date))									AS month_num,
+    Num(Week(transaction_date))											AS week,
+    Day(transaction_date)												AS day,
+    	Week(transaction_date)&'-'&Weekday(transaction_date)			AS week_day,
+ 	Weekday(transaction_date)											AS weekday,
+ 
+        
+	Year(transaction_date)&Num(Month(transaction_date))					AS year_month,
+    	Year(transaction_date)&Num(Month(transaction_date),00)			AS year_month_I,
+        Year(transaction_date)&'-'&Num(Month(transaction_date),00)		AS year_month_II,
+
+	Dual(WeekYear(transaction_date)&Num(Week(transaction_date),00),WeekYear(transaction_date)&Num(Week(transaction_date),00))					AS year_week,
+    	Dual(WeekYear(transaction_date)&'W'&num(Week(transaction_date),00),WeekYear(transaction_date)&num(Week(transaction_date),00)) 			AS year_week_II,
+
+	Dual('Q'&Num(Ceil(Num(Month(transaction_date))/3)),Num(Ceil(Num(Month(transaction_date))/3),00))											AS quarter,
+	Year(transaction_date)&Dual('Q'&Num(Ceil(Num(Month(transaction_date))/3)),Num(Ceil(Num(Month(transaction_date))/3),00)) 					AS year_quarter,
+	Year(transaction_date)&Dual('H'&Num(Ceil(Num(Month(transaction_date))/6)),Num(Ceil(Num(Month(transaction_date))/6),00)) 					AS year_half,    
+	
+	If(transaction_date<=$(vl_currentdate),transaction_date)			AS date_II,			// Dates until current date
+        
+////////////////////////////////////////////////////////////////////////////////////////////////////////   
+
+// Year
+
+	If(InYear(transaction_date,'$(vl_currentdate)',-0),'Yes','No')			AS in_ty,			// All dates this year
+	If(InYear(transaction_date,'$(vl_currentdate)',-1),'Yes','No')			AS in_ly,			// All dates last year
+    If(InYearToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No')	AS in_ytd_ty,		// All dates ytd this year
+	If(InYearToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No')	AS in_ytd_ly,		// All dates ytd last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Quarter
+
+	If(InQuarter(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 		AS in_tq_ty,		//  All dates qtd this year
+    If(InQuarter(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 			AS in_tq_ly,		//  All dates qtd last year
+    If(InQuarter(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 		AS in_prv_q_ty,		//  All dates previous quarter this year
+    If(InQuarter(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 			AS in_prv_q_ly,		//  All dates previous quarter last year
+	
+	If(InQuarterToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') AS in_qtd_ty,		//  All dates qtd this year
+	If(InQuarterToDate(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 		AS in_qtd_ly,		//  All dates qtd last year
+	If(InQuarterToDate (transaction_date,'$(vl_currentdate)',-1),'Yes','No')AS in_prv_qtd_ty, 	//  All dates previous qtd this year
+    If(InQuarterToDate (transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 	AS in_prv_qtd_ly, 	//  All dates previous qtd last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Month
+
+	If(InMonth(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 		AS in_tm_ty,		// All dates this month this year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-12),'Yes','No') 		AS in_tm_ly,		// All dates this month last year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 		AS in_prv_m_ty,		// All dates previous month this year
+    If(InMonth(transaction_date,'$(vl_currentdate)',-13),'Yes','No') 		AS in_prv_m_ly,		// All dates previous month last year
+	
+	If(InMonthToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 	AS in_mtd_ty,		// All dates mtd this year
+    If(InMonthToDate(transaction_date,'$(vl_currentdate)',-12),'Yes','No') 	AS in_mtd_ly,		// All dates mtd last year
+	If(InMonthToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 	AS in_prv_mtd_ty,	// All dates previous mtd this year
+    If(InMonthToDate(transaction_date,'$(vl_currentdate)',-13),'Yes','No') 	AS in_prv_mtd_ly,	// All dates previous last year
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Week
+
+	If(InWeek(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 			AS in_tw_ty,		// All dates this week this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 				AS in_tw_ly,		// All dates this week last year
+    If(InWeek(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 			AS in_prv_w_ty,		// All dates previous week this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 				AS in_prv_w_ly,		// All dates previous week this year
+	If(InWeek(transaction_date,'$(vl_currentdate)',-2),'Yes','No') 			AS in_2w_ago_ty,	// All dates 2 weeks ago this year
+    If(InWeek(transaction_date,'$(vl_ytd_ly)',-2),'Yes','No') 				AS in_2w_ago_ly,	// All dates 2 weeks ago last year
+
+	If(InWeekToDate(transaction_date,'$(vl_currentdate)',-0),'Yes','No') 	AS in_wtd_ty, 		// All dates wtd this year
+    If(InWeekToDate(transaction_date,'$(vl_ytd_ly)',-0),'Yes','No') 		AS in_wtd_ly,		// All dates wtd last year
+	If(InWeekToDate(transaction_date,'$(vl_currentdate)',-1),'Yes','No') 	AS in_prv_wtd_ty, 	// All dates previous wtd this year
+    If(InWeekToDate(transaction_date,'$(vl_ytd_ly)',-1),'Yes','No') 		AS in_prv_wtd_ly 	// All dates previous wtd this year
+
+;			// End section 1
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Generate transaction dates for calendar table
+
+LOAD
+ 	Date('$(vl_calendar_startdate)'+(Iterno()-1),'YYYY-MM-DD')			AS transaction_date
+
+	Autogenerate 1
+    
+WHILE Date('$(vl_calendar_startdate)'+(Iterno()-1),'YYYY-MM-DD')<=Date('$(vl_calendar_enddate)')
+
+;			// End section 2
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Choose which counters to include in app
+
+LET vl_want_year_count			= 'YES';
+LET vl_want_quarter_count		= 'YES';
+LET vl_want_week_count			= 'YES';
+LET vl_want_yearmonth_count		= 'YES';
+LET vl_want_yearhalf_count		= 'YES';
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Year counter module
+
+If '$(vl_want_year_count)' = 'YES' then			// Check if module is wanted
+
+// 1
+year_counter_p1:
+LOAD Distinct
+	year
+RESIDENT calendar
+ORDER BY year;
+
+	// 2
+	year_counter:
+	LOAD Distinct
+		year,
+		recno()			AS year_counter
+	RESIDENT year_counter_p1
+	ORDER BY year asc;	
+	DROP TABLE year_counter_p1;
+    
+TRACE Year counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Quarter counter module
+
+If '$(vl_want_quarter_count)' = 'YES' then
+
+// 1
+quarter_counter_p1:
+LOAD Distinct
+	year_quarter
+RESIDENT calendar
+ORDER BY year_quarter;
+
+	// 2
+    quarter_counter:
+    LOAD Distinct
+    	year_quarter,
+        recno()			AS quarter_counter
+	RESIDENT quarter_counter_p1
+    ORDER BY year_quarter asc;
+    DROP TABLE quarter_counter_p1;
+
+TRACE Quarter counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Week counter module
+
+If '$(vl_want_week_count)' = 'YES' then			// Check if module is wanted
+
+// 1
+week_counter_p1:
+LOAD Distinct
+	week
+RESIDENT calendar
+ORDER BY week;
+
+	// 2
+	week_counter:
+	LOAD Distinct
+		week,
+		recno()			AS week_counter
+	RESIDENT week_counter_p1
+	ORDER BY week asc;	
+	DROP TABLE week_counter_p1;
+
+TRACE Week counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Year month counter module
+
+If '$(vl_want_yearmonth_count)' = 'YES' then
+
+// 1
+yearmonth_counter_p1:
+Load distinct
+	year_month,
+	month_num
+RESIDENT calendar
+ORDER BY year_month;
+
+	// 2
+    yearmonth_counter:
+    LOAD Distinct
+    	year_month,
+        month_num			AS month_counter,
+		recno()				AS yearmonth_counter
+	RESIDENT yearmonth_counter_p1
+    ORDER BY year_month asc;
+    DROP TABLE yearmonth_counter_p1;
+
+TRACE Year month counter loaded;			// Script log statement
+
+end if
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Halfyear counter module
+
+If '$(vl_want_yearhalf_count)' = 'YES' then
+
+// 1
+yearhalf_counter_p1:
+LOAD Distinct
+	year_half
+RESIDENT calendar
+ORDER BY year_half;
+
+	// 2
+	yearhalf_counter:
+	LOAD Distinct
+		year_half,
+		recno()			AS yearhalf_counter
+	RESIDENT yearhalf_counter_p1
+	ORDER BY year_half asc;	
+	DROP TABLE yearhalf_counter_p1;
+
+TRACE Year half counter loaded;			// Script log statement
+
+end if
+
+// exit Script;			// For testing
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+///$tab ======================
+
+///$tab var_DB_output_ty
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// var_DB_output_ty
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+variables_db_output: NoConcatenate load distinct 
+    variables_name,
+    variable_value
+FROM [lib://BnM/2.QVD/Items/variables/season_code_variables_$(INSEASON_COLLECTION_TY).qvd]
+(qvd);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+mapping_db: MAPPING load
+    sc_season_code,
+    sc_season_code_name
+FROM [lib://BnM/2.QVD/Items/variables/season_type_mapping_$(INSEASON_COLLECTION_TY).qvd]
+(qvd);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    Let vL_RowNumber_2 = NoOfRows('variables_db_output');
+    
+
+    For i = 1 to $(vL_RowNumber_2) 
+//     For i = 1 to '1' // debug setting
+    
+    let vl_field_name = peek('variables_name',$(i)-1,'variables_db_output');
+    let vl_field_value = peek('variable_value',$(i)-1,'variables_db_output');
+	let $(vl_field_name) = '$(vl_field_value)';
+	
+    TRACE $(i) - $(vL_RowNumber_2);
+
+Next i;
+
+Concatenate(global_variables_db_output) load
+    variables_name as variable_name,
+    variable_value
+resident variables_db_output;
+drop table variables_db_output;
+///$tab var_DB_output_equal_ly
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// var_DB_output_equal_ly
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+variables_db_output: NoConcatenate load distinct 
+    variables_name & '_EQUAL_SEASON_LY' AS variables_name,
+    variable_value
+FROM [lib://BnM/2.QVD/Items/variables/season_code_variables_$(INSEASON_COLLECTION_2AGO).qvd]
+(qvd);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Let vL_RowNumber_2 = NoOfRows('variables_db_output');
+
+    For i = 1 to $(vL_RowNumber_2) 
+//     For i = 1 to '1' // debug setting
+    
+    let vl_field_name = peek('variables_name',$(i)-1,'variables_db_output');
+    let vl_field_value = peek('variable_value',$(i)-1,'variables_db_output');
+	let $(vl_field_name) = '$(vl_field_value)';
+	
+    TRACE $(i) - $(vL_RowNumber_2);
+
+Next i;
+
+Concatenate(global_variables_db_output) load
+    variables_name as variable_name,
+    variable_value
+resident variables_db_output;
+drop table variables_db_output;
+///$tab ======================
+
+///$tab bnm_mapping
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// bnm_mapping
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	bnm_mapping:
+	LOAD
+    	"StartTable BnM Mapping Key",
+//     	"StarTable Key ProFormaBudget",
+//     	"StarTable Key Budget",
+    	"BnM Brand Id",
+    	"BnM Brand Name",
+    	"BnM Sub Category",
+    	"BnM Category",
+    	"BnM Account Manager",
+    	"BnM Buyer",
+    	"BnM Merchandiser",
+//     	"BnM Junior Merchandiser",
+    	"BnM Brand Group",
+    	"BnM Department Group",
+    	"BnM Department Group Board",
+//     	"Proforma Original Sub Category",
+//     	"BnM Previous Sub Category",
+    	"BnM BIS Vendor Id",
+    	"BnM BIS Vendor Name",
+    	"BnM Business Model",
+    	'Total' as "BnM Total",
+		"BnM Sports Activity"
+	FROM [lib://BnM/2.QVD/Items/Bnm_Mapping.qvd] (qvd);
+
+		map_startable_key: mapping load "Item SKU", "StarTable Key ItemTable" FROM [lib://BnM/2.QVD/Items/StarTableKey_extended.qvd] (qvd);
+///$tab ======================
+
+///$tab ux_tables
+
+///$tab ======================
+
+///$tab items (NF)
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// items
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	items_table:
+	Load
+    	ApplyMap('map_startable_key',"Item SKU",'not mapped')			AS "StarTable BnM Mapping Key",
+		"Item Service Id",
+        "Item EAN Code",
+        "Item EAN Code"													AS "Discount EAN Code",
+        "Item Netsuite Id",
+    	"Item Color Variant Id",
+    	"Item Boozt Season",
+    	"Item Image Link",
+    	"Item SKU",
+    	"Item Display Name",
+    	"Item Product Id",
+    	"Item Color Name",
+    	"Item Sold In",
+    	"Item Brand Name",
+    	"SE Base Price",
+    	"SE Actual Price",
+    	"Item Current Stock"
+	FROM [lib://BnM/2.QVD/Items/Items.qvd] (qvd);
+
+// 		map_image_link_service_id: mapping load "Item Service Id", "Item Image Link" Resident items_p1;
+///$tab item_prices
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// item_prices
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	item_prices:
+    NoConcatenate LOAD
+// 		price_date,
+
+//     	price_item_service_id,
+//     	price_item_netsuite_id,
+//     	price_item_product_id,
+    	price_item_ean_code			AS "Item EAN Code",
+//     	price_item_service_variant_id,
+//     	price_item_color_variant_id,
+//     	price_item_booztlet_color_variant_id,
+    
+    	// Boozt active price
+    	price_se_boozt_active_price,
+    	price_dk_boozt_active_price,
+    	price_no_boozt_active_price,
+    	price_fi_boozt_active_price,
+    	price_de_boozt_active_price,
+    	price_nl_boozt_active_price,
+    	price_fr_boozt_active_price,
+    	price_eu_boozt_active_price,
+    	price_pl_boozt_active_price,
+    	price_is_boozt_active_price,
+    	price_ee_boozt_active_price,
+    	price_lv_boozt_active_price,
+    	price_lt_boozt_active_price,
+    	price_at_boozt_active_price,
+    
+    	// Boozt base price
+    	price_se_boozt_base_price,
+    	price_dk_boozt_base_price,
+    	price_no_boozt_base_price,
+    	price_fi_boozt_base_price,
+    	price_de_boozt_base_price,
+    	price_nl_boozt_base_price,
+    	price_fr_boozt_base_price,
+    	price_eu_boozt_base_price,
+    	price_pl_boozt_base_price,
+    	price_is_boozt_base_price,
+    	price_ee_boozt_base_price,
+    	price_lv_boozt_base_price,
+    	price_lt_boozt_base_price,
+    	price_at_boozt_base_price,
+    
+    	// Boozt actual price
+    	price_se_boozt_actual_price,
+    	price_dk_boozt_actual_price,
+    	price_no_boozt_actual_price,
+    	price_fi_boozt_actual_price,
+    	price_de_boozt_actual_price,
+    	price_nl_boozt_actual_price,
+    	price_fr_boozt_actual_price,
+    	price_eu_boozt_actual_price,
+    	price_pl_boozt_actual_price,
+    	price_is_boozt_actual_price,
+    	price_ee_boozt_actual_price,
+    	price_lv_boozt_actual_price,
+    	price_lt_boozt_actual_price,
+    	price_at_boozt_actual_price,
+    
+    	// Boozt md
+    	price_se_boozt_md,
+    	price_dk_boozt_md,
+    	price_no_boozt_md,
+    	price_fi_boozt_md,
+    	price_de_boozt_md,
+    	price_nl_boozt_md,
+    	price_fr_boozt_md,
+    	price_pl_boozt_md,
+    	price_eu_boozt_md,
+    	price_is_boozt_md,
+    	price_ee_boozt_md,
+    	price_lv_boozt_md,
+    	price_lt_boozt_md,
+    	price_at_boozt_md,
+    
+    	// Boozt mdv price
+    	price_se_boozt_mdv_price,
+    	price_dk_boozt_mdv_price,
+    	price_no_boozt_mdv_price,
+    	price_fi_boozt_mdv_price,
+    	price_de_boozt_mdv_price,
+    	price_nl_boozt_mdv_price,
+    	price_fr_boozt_mdv_price,
+    	price_eu_boozt_mdv_price,
+    	price_pl_boozt_mdv_price,
+    	price_is_boozt_mdv_price,
+    	price_ee_boozt_mdv_price,
+    	price_lv_boozt_mdv_price,
+    	price_lt_boozt_mdv_price,
+    	price_at_boozt_mdv_price,
+    
+    	// Boozt mdv discount reduction
+    	price_se_boozt_mdv_discount_reduction,
+    	price_dk_boozt_mdv_discount_reduction,
+    	price_no_boozt_mdv_discount_reduction,
+    	price_fi_boozt_mdv_discount_reduction,
+    	price_de_boozt_mdv_discount_reduction,
+    	price_nl_boozt_mdv_discount_reduction,
+    	price_fr_boozt_mdv_discount_reduction,
+    	price_eu_boozt_mdv_discount_reduction,
+    	price_pl_boozt_mdv_discount_reduction,
+    	price_is_boozt_mdv_discount_reduction,
+    	price_ee_boozt_mdv_discount_reduction,
+    	price_lv_boozt_mdv_discount_reduction,
+    	price_lt_boozt_mdv_discount_reduction,
+    	price_at_boozt_mdv_discount_reduction
+    
+//     	// Booztlet active price
+//     	price_se_booztlet_active_price,
+//     	price_dk_booztlet_active_price,
+//     	price_no_booztlet_active_price,
+//     	price_fi_booztlet_active_price,
+//     	price_de_booztlet_active_price,
+//     	price_nl_booztlet_active_price,
+//     	price_fr_booztlet_active_price,
+//     	price_eu_booztlet_active_price,
+//     	price_pl_booztlet_active_price,
+//     	price_is_booztlet_active_price,
+//     	price_ee_booztlet_active_price,
+//     	price_lv_booztlet_active_price,
+//     	price_lt_booztlet_active_price,
+//     	price_at_booztlet_active_price,
+    
+//     	// Booztlet base price
+//     	price_se_booztlet_base_price,
+//     	price_dk_booztlet_base_price,
+//     	price_no_booztlet_base_price,
+//     	price_fi_booztlet_base_price,
+//     	price_de_booztlet_base_price,
+//     	price_nl_booztlet_base_price,
+//     	price_fr_booztlet_base_price,
+//     	price_eu_booztlet_base_price,
+//     	price_pl_booztlet_base_price,
+//     	price_is_booztlet_base_price,
+//     	price_ee_booztlet_base_price,
+//     	price_lv_booztlet_base_price,
+//     	price_lt_booztlet_base_price,
+//     	price_at_booztlet_base_price,
+    
+//     	// Booztlet actual price
+//     	price_se_booztlet_actual_price,
+//     	price_dk_booztlet_actual_price,
+//     	price_no_booztlet_actual_price,
+//     	price_fi_booztlet_actual_price,
+//     	price_de_booztlet_actual_price,
+//     	price_nl_booztlet_actual_price,
+//     	price_fr_booztlet_actual_price,
+//     	price_eu_booztlet_actual_price,
+//     	price_pl_booztlet_actual_price,
+//     	price_is_booztlet_actual_price,
+//     	price_ee_booztlet_actual_price,
+//     	price_lv_booztlet_actual_price,
+//     	price_lt_booztlet_actual_price,
+//     	price_at_booztlet_actual_price,
+    
+//     	// Booztlet md
+//     	price_se_booztlet_md,
+//     	price_dk_booztlet_md,
+//     	price_no_booztlet_md,
+//     	price_fi_booztlet_md,
+//     	price_de_booztlet_md,
+//     	price_nl_booztlet_md,
+//     	price_fr_booztlet_md,
+//     	price_pl_booztlet_md,
+//     	price_eu_booztlet_md,
+//     	price_is_booztlet_md,
+//     	price_ee_booztlet_md,
+//     	price_lv_booztlet_md,
+//     	price_lt_booztlet_md,
+//     	price_at_booztlet_md,
+    
+//     	// Booztlet mdv price
+//     	price_se_booztlet_mdv_price,
+//     	price_dk_booztlet_mdv_price,
+//     	price_no_booztlet_mdv_price,
+//     	price_fi_booztlet_mdv_price,
+//     	price_de_booztlet_mdv_price,
+//     	price_nl_booztlet_mdv_price,
+//     	price_fr_booztlet_mdv_price,
+//     	price_eu_booztlet_mdv_price,
+//     	price_pl_booztlet_mdv_price,
+//     	price_is_booztlet_mdv_price,
+//     	price_ee_booztlet_mdv_price,
+//     	price_lv_booztlet_mdv_price,
+//     	price_lt_booztlet_mdv_price,
+//     	price_at_booztlet_mdv_price,
+    
+//     	// Booztlet mdv discount reduction
+//     	price_se_booztlet_mdv_discount_reduction,
+//     	price_dk_booztlet_mdv_discount_reduction,
+//     	price_no_booztlet_mdv_discount_reduction,
+//     	price_fi_booztlet_mdv_discount_reduction,
+//     	price_de_booztlet_mdv_discount_reduction,
+//     	price_nl_booztlet_mdv_discount_reduction,
+//     	price_fr_booztlet_mdv_discount_reduction,
+//     	price_eu_booztlet_mdv_discount_reduction,
+//     	price_pl_booztlet_mdv_discount_reduction,
+//     	price_is_booztlet_mdv_discount_reduction,
+//     	price_ee_booztlet_mdv_discount_reduction,
+//     	price_lv_booztlet_mdv_discount_reduction,
+//     	price_lt_booztlet_mdv_discount_reduction,
+//     	price_at_booztlet_mdv_discount_reduction
+	FROM [lib://BnM/2.QVD/Items/item_price_archive/item_prices_$(vl_lastappdatetoload_YYYYMMDD).qvd](qvd);
+///$tab item_discounts
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// item_discounts
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	
+LOAD
+//     "Item Netsuite Id",
+//     "Item Service Id",
+    "Item EAN Code"			AS "Discount EAN Code",
+//     "Item Color Variant Id",
+    "Discount Id",
+    "Discount Name",
+    "Discount Start Date",
+    "Discount End Date",
+    "Discount Start Hour",
+    "Discount End Hour",
+    "Discount Product Id Count",
+    "Discount Mirror Status",
+    "Discount Prioritized",
+    "Discount Approval List",
+    "Discount Read For Approval",
+    "Discount Live",
+    "Discount Last Updated",
+    "Discount Type",
+    "Discount Reduction",
+    "Discount Nice Price",
+    "Discount Deleted",
+    "Discount Campaign Name",
+    "Discount Sold In",
+    "Discount Seasons"
+FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
+(qvd);
+
+
+///$tab sales_p1
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_p1
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	LET vl_file_dir			= 'lib://BnM/2.QVD/sales_finance/service_id/';											// Change file directory based on your need
+	LET vl_file_name		= 'sales_finance_';																		// Change file name based on your need 
+
+		FOR EACH vl_file IN FILELIST('$(vl_file_dir)'&'$(vl_file_name)'&'*');
+
+			LET vl_filedate = Left(Subfield('$(vl_file)','$(vl_file_name)',2),6);									// Change left value to 10 if file date is denoted as 'YYYY-MM-DD'
+
+			IF (Date('$(vl_filedate)','YYYYMM') >= Date('$(vl_current_month_minus_3)','YYYYMM')) THEN				// Change date format if file date is denoted as 'YYYY-MM-DD'
+
+				TRACE Loading: $(vl_file_name)$(vl_filedate);
+
+				sales_table_p1:
+				LOAD
+            		sales_item_service_id										AS "Item Service Id",
+            		sales_item_service_id,
+            		sales_transaction_type,
+            		sales_store_name,
+            		sales_order_id,
+            		sales_currency,
+            		Capitalize(sales_country_of_purchase)						AS sales_country_of_purchase,
+            		sales_shop_section,
+            		Date(sales_order_transaction_date, 'YYYY-MM-DD')			AS transaction_date,
+            		sales_order_transaction_hour_minute							AS transaction_hour_minute,
+            		sales_order_transaction_hour								AS transaction_hour,
+//             		sales_transaction_date,
+            		sales_exchange_rate,
+            		sales_sales_order_finance_id,
+            		sales_transaction_id,
+            		sales_company_subsidiary,
+            		sales_country_of_purchase_grouped,
+            		sales_payment_method,
+            		sales_service_customer_id,
+            		sales_stock_id,
+            		sales_season_code,
+            		sales_collection_code,
+            		sales_item_price_ex_vat,
+            		sales_item_price_ex_vat_fc,
+            		stock_season_code,
+
+            		sales_voucher_type,
+            		sales_voucher_code,
+
+            		sales_business_model,
+            			If(sales_collection_code<>'$(INSEASON_COLLECTION_1AHEAD)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_TY)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_1AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_2AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_3AGO)','OLD',sales_collection_code)						AS stock_collection_code,
+
+					// Sales figures
+            		If(IsNull((sales_cash_sale_purchase_amount_ex_vat*'1.25')),'0',sales_cash_sale_purchase_amount_ex_vat)   	AS sales_cash_sale_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_discount_amount*'1.25')),'0',sales_cash_sale_discount_amount)          			AS sales_cash_sale_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_voucher_amount*'1.25')),'0',sales_cash_sale_voucher_amount)           			AS sales_cash_sale_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat),'0',sales_cash_sale_purchase_amount_ex_vat)				AS sales_cash_sale_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_discount_amount),'0',sales_cash_sale_discount_amount)								AS sales_cash_sale_discount_amount,
+            		If(IsNull(sales_cash_sale_voucher_amount),'0',sales_cash_sale_voucher_amount)								AS sales_cash_sale_voucher_amount,
+// 					sales_cash_sale_base_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat_fc),'0',sales_cash_sale_purchase_amount_ex_vat_fc)			AS sales_cash_sale_purchase_amount_ex_vat_fc,
+            		If(IsNull(sales_cash_sale_voucher_amount_fc),'0',sales_cash_sale_voucher_amount_fc)							AS sales_cash_sale_voucher_amount_fc,
+            		If(IsNull(sales_cash_sale_discount_amount_fc),'0',sales_cash_sale_discount_amount_fc)						AS sales_cash_sale_discount_amount_fc,
+            		If(IsNull(sales_cash_sale_cogs_amount),'0',sales_cash_sale_cogs_amount)										AS sales_cash_sale_cogs_amount,
+            		If(IsNull(sales_cash_sale_cogs_consignment_amount),'0',sales_cash_sale_cogs_consignment_amount)				AS sales_cash_sale_cogs_consignment_amount,
+            		If(IsNull(sales_cash_sale_norwegian_customs_amount),'0',sales_cash_sale_norwegian_customs_amount)			AS sales_cash_sale_norwegian_customs_amount,
+            		If(IsNull(sales_cash_sale_quantity),'0',sales_cash_sale_quantity)											AS sales_cash_sale_quantity,
+                    
+                    // Refund figures
+                    If(IsNull((sales_cash_refund_purchase_amount_ex_vat*'1.25')),'0',sales_cash_refund_purchase_amount_ex_vat)   	AS sales_cash_refund_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_discount_amount*'1.25')),'0',sales_cash_refund_discount_amount)          			AS sales_cash_refund_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_voucher_amount*'1.25')),'0',sales_cash_refund_voucher_amount)           			AS sales_cash_refund_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_refund_purchase_amount_ex_vat),'0',sales_cash_refund_purchase_amount_ex_vat)				AS sales_cash_refund_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_refund_discount_amount),'0',sales_cash_refund_discount_amount)								AS sales_cash_refund_discount_amount,
+            		If(IsNull(sales_cash_refund_voucher_amount),'0',sales_cash_refund_voucher_amount)								AS sales_cash_refund_voucher_amount,
+            		If(IsNull(sales_cash_refund_cogs_amount),'0',sales_cash_refund_cogs_amount)										AS sales_cash_refund_cogs_amount,
+            		If(IsNull(sales_cash_refund_cogs_consignment_amount),'0',sales_cash_refund_cogs_consignment_amount)				AS sales_cash_refund_cogs_consignment_amount,
+            		If(IsNull(sales_cash_refund_norwegian_customs_amount),'0',sales_cash_refund_norwegian_customs_amount)			AS sales_cash_refund_norwegian_customs_amount,
+            		If(IsNull(sales_cash_refund_quantity),'0',sales_cash_refund_quantity)											AS sales_cash_refund_quantity
+                    
+				FROM $(vl_file)(qvd);
+//         	WHERE EXISTS(load_po,"PO Boozt Order No");
+// WHERE EXISTS(load_sid,sales_item_service_id);
+//     		WHERE EXISTS(load_po,"PO Boozt Order No") AND EXISTS(load_collections,"PO Collection");
+              
+			END IF
+
+		NEXT vl_file
+
+			TRACE Sales file loop 1 completed;
+            
+            	LEFT JOIN (sales_table_p1) LOAD "Item Service Id" AS sales_item_service_id,"Item SKU","Item Color Variant Id" AS sales_item_color_variant_id RESIDENT items_table;
+///$tab sales_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table:
+    NoConcatenate LOAD
+    	"Item Service Id",
+        sales_item_service_id,
+		sales_item_color_variant_id,
+    	"Item SKU"													AS sales_item_sku,
+    	transaction_date,
+//     	"StarTable BnM Mapping Key",
+    	stock_season_code,
+//     	stock_season_type,
+//     	stock_collection_code,
+    	sales_store_name,    
+    	sales_country_of_purchase_grouped,
+    	sales_country_of_purchase,
+    	sales_shop_section,
+        sales_order_id,
+    
+        ApplyMap('map_startable_key',"Item SKU",'error')																		AS "StarTable BnM Mapping Key",
+		ApplyMap('mapping_db',sales_season_code,'PRE')																			AS stock_season_type,  
+            
+		(sales_cash_sale_norwegian_customs_amount+sales_cash_sale_cogs_amount+sales_cash_sale_cogs_consignment_amount)			AS sales_cash_sale_total_cogs_amount,
+    	(sales_cash_refund_norwegian_customs_amount+sales_cash_refund_cogs_amount+sales_cash_refund_cogs_consignment_amount)	AS sales_cash_refund_total_cogs_amount,
+		(sales_cash_sale_discount_amount+sales_cash_sale_voucher_amount+sales_cash_sale_purchase_amount_ex_vat)					AS sales_cash_sale_total_purchase_amount_inc_total_discount,
+        (sales_cash_refund_discount_amount+sales_cash_refund_voucher_amount+sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_total_purchase_amount_inc_total_discount
+	RESIDENT sales_table_p1
+    WHERE transaction_date >= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+    DROP TABLE sales_table_p1;
+///$tab sales_cv_p1
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_cv
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	LET vl_file_dir			= 'lib://BnM/2.QVD/sales_finance/service_id/';											// Change file directory based on your need
+	LET vl_file_name		= 'sales_finance_';																		// Change file name based on your need 
+
+		FOR EACH vl_file IN FILELIST('$(vl_file_dir)'&'$(vl_file_name)'&'*');
+
+			LET vl_filedate = Left(Subfield('$(vl_file)','$(vl_file_name)',2),6);									// Change left value to 10 if file date is denoted as 'YYYY-MM-DD'
+
+			IF (Date('$(vl_filedate)','YYYYMM') >= Date('$(vl_firstappdatetoload_YYYYMM)','YYYYMM')) AND (Date('$(vl_filedate)','YYYYMM') < Date('$(vl_current_month_minus_3)','YYYYMM')) THEN				// Change date format if file date is denoted as 'YYYY-MM-DD'
+
+				TRACE Loading: $(vl_file_name)$(vl_filedate);
+
+				sales_table_cv_p1:
+				LOAD
+            		sales_item_service_id										AS "Item Service Id",
+            		sales_item_service_id,
+            		sales_transaction_type,
+            		sales_store_name,
+            		sales_order_id,
+            		sales_currency,
+            		Capitalize(sales_country_of_purchase)						AS sales_country_of_purchase,
+            		sales_shop_section,
+            		Date(sales_order_transaction_date, 'YYYY-MM-DD')			AS transaction_date,
+            		sales_order_transaction_hour_minute							AS transaction_hour_minute,
+            		sales_order_transaction_hour								AS transaction_hour,
+//             		sales_transaction_date,
+            		sales_exchange_rate,
+            		sales_sales_order_finance_id,
+            		sales_transaction_id,
+            		sales_company_subsidiary,
+            		sales_country_of_purchase_grouped,
+            		sales_payment_method,
+            		sales_service_customer_id,
+            		sales_stock_id,
+            		sales_season_code,
+            		sales_collection_code,
+            		sales_item_price_ex_vat,
+            		sales_item_price_ex_vat_fc,
+            		stock_season_code,
+
+            		sales_voucher_type,
+            		sales_voucher_code,
+
+            		sales_business_model,
+            		    If(sales_collection_code<>'$(INSEASON_COLLECTION_1AHEAD)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_TY)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_1AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_2AGO)' AND
+    					sales_collection_code<>'$(INSEASON_COLLECTION_3AGO)','OLD',sales_collection_code)						AS stock_collection_code,
+
+					// Sales figures
+            		If(IsNull((sales_cash_sale_purchase_amount_ex_vat*'1.25')),'0',sales_cash_sale_purchase_amount_ex_vat)   	AS sales_cash_sale_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_discount_amount*'1.25')),'0',sales_cash_sale_discount_amount)          			AS sales_cash_sale_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_sale_voucher_amount*'1.25')),'0',sales_cash_sale_voucher_amount)           			AS sales_cash_sale_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat),'0',sales_cash_sale_purchase_amount_ex_vat)				AS sales_cash_sale_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_discount_amount),'0',sales_cash_sale_discount_amount)								AS sales_cash_sale_discount_amount,
+            		If(IsNull(sales_cash_sale_voucher_amount),'0',sales_cash_sale_voucher_amount)								AS sales_cash_sale_voucher_amount,
+// 					sales_cash_sale_base_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_sale_purchase_amount_ex_vat_fc),'0',sales_cash_sale_purchase_amount_ex_vat_fc)			AS sales_cash_sale_purchase_amount_ex_vat_fc,
+            		If(IsNull(sales_cash_sale_voucher_amount_fc),'0',sales_cash_sale_voucher_amount_fc)							AS sales_cash_sale_voucher_amount_fc,
+            		If(IsNull(sales_cash_sale_discount_amount_fc),'0',sales_cash_sale_discount_amount_fc)						AS sales_cash_sale_discount_amount_fc,
+            		If(IsNull(sales_cash_sale_cogs_amount),'0',sales_cash_sale_cogs_amount)										AS sales_cash_sale_cogs_amount,
+            		If(IsNull(sales_cash_sale_cogs_consignment_amount),'0',sales_cash_sale_cogs_consignment_amount)				AS sales_cash_sale_cogs_consignment_amount,
+            		If(IsNull(sales_cash_sale_norwegian_customs_amount),'0',sales_cash_sale_norwegian_customs_amount)			AS sales_cash_sale_norwegian_customs_amount,
+            		If(IsNull(sales_cash_sale_quantity),'0',sales_cash_sale_quantity)											AS sales_cash_sale_quantity,
+                    
+                    // Refund figures
+                    If(IsNull((sales_cash_refund_purchase_amount_ex_vat*'1.25')),'0',sales_cash_refund_purchase_amount_ex_vat)   	AS sales_cash_refund_purchase_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_discount_amount*'1.25')),'0',sales_cash_refund_discount_amount)          			AS sales_cash_refund_voucher_amount_inc_vat,
+            		If(IsNull((sales_cash_refund_voucher_amount*'1.25')),'0',sales_cash_refund_voucher_amount)           			AS sales_cash_refund_discount_amount_inc_vat,
+                    
+            		If(IsNull(sales_cash_refund_purchase_amount_ex_vat),'0',sales_cash_refund_purchase_amount_ex_vat)				AS sales_cash_refund_purchase_amount_ex_vat,
+            		If(IsNull(sales_cash_refund_discount_amount),'0',sales_cash_refund_discount_amount)								AS sales_cash_refund_discount_amount,
+            		If(IsNull(sales_cash_refund_voucher_amount),'0',sales_cash_refund_voucher_amount)								AS sales_cash_refund_voucher_amount,
+            		If(IsNull(sales_cash_refund_cogs_amount),'0',sales_cash_refund_cogs_amount)										AS sales_cash_refund_cogs_amount,
+            		If(IsNull(sales_cash_refund_cogs_consignment_amount),'0',sales_cash_refund_cogs_consignment_amount)				AS sales_cash_refund_cogs_consignment_amount,
+            		If(IsNull(sales_cash_refund_norwegian_customs_amount),'0',sales_cash_refund_norwegian_customs_amount)			AS sales_cash_refund_norwegian_customs_amount,
+            		If(IsNull(sales_cash_refund_quantity),'0',sales_cash_refund_quantity)											AS sales_cash_refund_quantity
+				FROM $(vl_file)(qvd);
+//         	WHERE EXISTS(load_po,"PO Boozt Order No");
+// WHERE EXISTS(load_sid,sales_item_service_id);
+//     		WHERE EXISTS(load_po,"PO Boozt Order No") AND EXISTS(load_collections,"PO Collection");
+              
+			END IF
+
+		NEXT vl_file
+
+			TRACE Sales file loop 2 completed;
+            
+				LEFT JOIN (sales_table_cv_p1) LOAD "Item Service Id" AS sales_item_service_id,"Item SKU","Item Color Variant Id" AS sales_item_color_variant_id RESIDENT items_table;
+///$tab sales_cv_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_cv_p2
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table_cv_p2:
+    NoConcatenate LOAD
+    	*,
+        ApplyMap('map_startable_key',"Item SKU",'error')			AS "StarTable BnM Mapping Key",
+		ApplyMap('mapping_db',sales_season_code,'PRE')				AS stock_season_type
+	RESIDENT sales_table_cv_p1
+    WHERE transaction_date >= '$(vl_lastappdatetoload_YYYY_MM_DD)';
+    DROP TABLE sales_table_cv_p1;
+
+///$tab sales_cv_p3
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// sales_cv_p3
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	sales_table_cv_p3:
+    NoConcatenate LOAD
+    sales_item_color_variant_id,
+    "Item SKU"													AS sales_item_sku,
+    transaction_date,
+    "StarTable BnM Mapping Key",
+    stock_season_code,
+    stock_season_type,
+    stock_collection_code,
+    sales_store_name,    
+    sales_country_of_purchase_grouped,
+    sales_country_of_purchase,
+    sales_shop_section,
+
+		// Sales figures
+		Sum(sales_cash_sale_purchase_amount_inc_vat)			AS sales_cash_sale_purchase_amount_inc_vat,
+		Sum(sales_cash_sale_voucher_amount_inc_vat)				AS sales_cash_sale_voucher_amount_inc_vat,
+		Sum(sales_cash_sale_discount_amount_inc_vat)			AS sales_cash_sale_discount_amount_inc_vat,
+                    
+		Sum(sales_cash_sale_purchase_amount_ex_vat)				AS sales_cash_sale_purchase_amount_ex_vat,
+		Sum(sales_cash_sale_discount_amount)					AS sales_cash_sale_discount_amount,
+		Sum(sales_cash_sale_voucher_amount)						AS sales_cash_sale_voucher_amount,
+// 		Sum(sales_cash_sale_base_purchase_amount_ex_vat)			AS sales_cash_sale_base_purchase_amount_ex_vat,
+		Sum(sales_cash_sale_purchase_amount_ex_vat_fc)			AS sales_cash_sale_purchase_amount_ex_vat_fc,
+		Sum(sales_cash_sale_voucher_amount_fc)					AS sales_cash_sale_voucher_amount_fc,
+		Sum(sales_cash_sale_discount_amount_fc)					AS sales_cash_sale_discount_amount_fc,
+		Sum(sales_cash_sale_cogs_amount)						AS sales_cash_sale_cogs_amount,
+		Sum(sales_cash_sale_cogs_consignment_amount)			AS sales_cash_sale_cogs_consignment_amount,
+		Sum(sales_cash_sale_norwegian_customs_amount)			AS sales_cash_sale_norwegian_customs_amount,
+		Sum(sales_cash_sale_quantity)							AS sales_cash_sale_quantity,
+        
+        Sum(sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_purchase_amount_ex_vat,
+        Sum(sales_cash_refund_discount_amount)					AS sales_cash_refund_discount_amount,
+        Sum(sales_cash_refund_voucher_amount)					AS sales_cash_refund_voucher_amount,
+                    
+        Sum(sales_cash_refund_purchase_amount_ex_vat)			AS sales_cash_refund_purchase_amount_ex_vat,
+        Sum(sales_cash_refund_discount_amount)					AS sales_cash_refund_discount_amount,
+        Sum(sales_cash_refund_voucher_amount)					AS sales_cash_refund_voucher_amount,
+        Sum(sales_cash_refund_cogs_amount)						AS sales_cash_refund_cogs_amount,
+        Sum(sales_cash_refund_cogs_consignment_amount)			AS sales_cash_refund_cogs_consignment_amount,
+        Sum(sales_cash_refund_norwegian_customs_amount)			AS sales_cash_refund_norwegian_customs_amount,
+		Sum(sales_cash_refund_quantity)							AS sales_cash_refund_quantity,
+        
+		(Sum(sales_cash_sale_norwegian_customs_amount)+Sum(sales_cash_sale_cogs_amount)+Sum(sales_cash_sale_cogs_consignment_amount))			AS sales_cash_sale_total_cogs_amount,
+    	(Sum(sales_cash_refund_norwegian_customs_amount)+Sum(sales_cash_refund_cogs_amount)+Sum(sales_cash_refund_cogs_consignment_amount))		AS sales_cash_refund_total_cogs_amount,
+		(Sum(sales_cash_sale_discount_amount)+Sum(sales_cash_sale_voucher_amount)+Sum(sales_cash_sale_purchase_amount_ex_vat))					AS sales_cash_sale_total_purchase_amount_inc_total_discount,
+        (Sum(sales_cash_refund_discount_amount)+Sum(sales_cash_refund_voucher_amount)+Sum(sales_cash_refund_purchase_amount_ex_vat))			AS sales_cash_refund_total_purchase_amount_inc_total_discount
+	RESIDENT sales_table_cv_p2
+    GROUP BY
+        	sales_item_color_variant_id,
+       		transaction_date,
+        	"StarTable BnM Mapping Key",
+        	stock_season_code,
+        	stock_season_type,
+        	stock_collection_code,
+        	sales_store_name,
+        	"Item SKU",
+        	sales_country_of_purchase_grouped,
+        	sales_country_of_purchase,
+        	sales_shop_section;
+	DROP TABLE sales_table_cv_p2;
+            
+            	STORE sales_table_cv_p2 INTO [lib://BnM/2.QVD/app_loads/daily_sales_records/daily_sales_records_(vl_lastappdatetoload_YYYYMMDD).qvd](qvd);
+            
+            	CONCATENATE (sales_table) LOAD * RESIDENT sales_table_cv_p3; DROP TABLE sales_table_cv_p3;
+///$tab testing gittoqlik
+// testing testing testing
+///$tab ======================
+
+///$tab ux_period_select
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ux_time_select
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// 	LET vPeriodOneStart	= Null();
+//     LET vPeriodOneEnd	= Null();
+//     LET vPeriodTwoStart	= Null();
+//     LET vPeriodTwoEnd	= Null();
+
+	ux_period_select:
+    NoConcatenate LOAD Distinct
+    	transaction_date			AS ux_period_one,
+        transaction_date			AS ux_period_two
+	RESIDENT sales_table;
+///$tab ======================
+
+///$tab exit
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// exit
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	EXIT SCRIPT;
+///$tab old sales
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//--- Mapping
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+	Map_Cost_Price:
+
+	Mapping
+	LOAD
+		"Item Netsuite Id",
+		"Item Cost in SEK"
+	FROM [lib://Common/2.QVD\Items.qvd]
+	(qvd);
+
+	// -----------------------------------------------------------------------
+    // Consignment Mappings
+	// -----------------------------------------------------------------------
+    
+	Map_Brand_Consignment_Fee:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Brand_Consignment_Fee_EU:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee EU"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Brand_Consignment_Fee_NO:
+	Mapping
+	LOAD
+		"%Brand Id",
+		"Brand Consignment Fee NO"
+	FROM [lib://Common/2.QVD\Brands.qvd]
+	(qvd);
+
+	Map_Main_Category:
+	Mapping
+	LOAD
+		"Item Netsuite Id",
+		"Item Main Category"
+	FROM [lib://Common/2.QVD\Items.qvd]
+	(qvd);  	
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//--- Code
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+		// Read stock data for all mondays adding value cost and salesvalue
+		FOR Each File in filelist ('[lib://Common/2.QVD\SalesOrders\*]')
+
+        //------------------------------------------------------------------
+        //
+        // Variable to generate the year month name from the stock file date --> format YYYYMM
+        //
+        //-------------------------------------------------------------------
+
+        let vl.YearMonth = SubField(SubField('$(File)','_',2),'.',1); // in this case the '_' represents the start of the string and the '.' represents the end point (2 stands for all after and 1 for all before )
+
+            if( vl.YearMonth>=vL.YearMonthSalesToLoad) then   //Load only monday stock files
+
+				Sales:
+
+				LOAD
+
+						// ----------------------------------------------
+                        // DIMENSIONS
+                        // ----------------------------------------------
+                        ShopSection,
+                        "Item Netsuite Id",
+                        "Sales Order Discount Percentage" 																	as "Sales Order Discount Percentage",
+						if("Sales Order Brand Business Model" = 'Own Buy', 'OB', 'C') 										as "Sales Order Brand Consignment",
+                        "Sales Order Delivery Country" 																		as "Sales Order Country",
+						  "Sales Order Voucher Code",
+                          "Sales Order Voucher Type",
+                          "Sales Order Currency Code",
+                          "Sales Order Vat Rate",
+                          "Sales Order Currency Rate",
+						  date(round(floor(date("Sales Order Purchase Date")))) 											as FactDate,
+                          // "Transaction Type" AS "Sales Order Transaction Type",
+                          
+                          date(round(floor(date("Sales Order Purchase Date")))) 											as "Sales Order Purchase Date",
+                          "Sales Order EAN Code" 																			as "Sales Order EAN Code",
+                          
+                          "Sales Order Reference Number" 																	as "Sales Order Number",
+                          if(left("Sales Order Reference Number",2) = 'BZ','Boozt',
+                          if(left("Sales Order Reference Number",2) = 'EC','ECCO',
+                          if(left("Sales Order Reference Number",2) = 'OL','Outlet',
+                          if(left("Sales Order Reference Number",2) = 'CO','Stock Take Out for Physical Outlet',
+                          if(left("Sales Order Reference Number",2) = 'DY','Day',
+                          if(left("Sales Order Reference Number",2) = 'RO','Retail Outlet','Not Known')))))) 				as "Sales Order Store",
+                                        
+                      //     Brand as "Sales Order Brand",
+                      //     Gender as "Sales Order Gender",
+                      //     "Product Type" as "Sales Order Product Type",
+                      //     SKU as "Sales Order SKU",
+                      //     "Color" as "Sales Order Product Color",
+                      //     "Product Name" as "Sales Order Product Name",
+                      //     "Season Code" as "Sales Order Season Code",
+                      //     "Brand Season" as "Sales Order Brand Season",
+
+						// ----------------------------------------------
+                        // INC VAT
+                        // ----------------------------------------------
+                        
+
+                          "Sales Order Base Price SEK Ex VAT" * "Sales Order Quantity" 										as "Sales Order Amount in SEK inc. Discount ex VAT",
+                          "Sales Order Quantity" 																			as "Sales Order Quantity",
+                          
+                          
+                          ("Sales Order Actual Price SEK Ex VAT" * 1.25) * "Sales Order Quantity"							as "Sales Order Amount in SEK inc VAT",
+                          ("Sales Order Base Price SEK Ex VAT" * 1.25)  * "Sales Order Quantity"							as "Sales Order Amount in SEK inc. Discount inc VAT",
+
+						  (
+                          	(
+                            	"Sales Order Voucher Value SEK Ex VAT" + 
+                            	"Sales Order Discount Value SEK Ex VAT"
+                            ) * 1.25
+                         ) 																									as "Sales Order Discount Amount in SEK inc VAT",
+						  "Sales Order Voucher Value SEK Ex VAT" * 1.25														as "Sales Order Voucher Value SEK inc VAT",
+                          "Sales Order Discount Value SEK Ex VAT" * 1.25													as "Sales Order Discount Value SEK inc VAT",
+                          
+                          
+
+						"Sales Order Base Price SEK Ex VAT" * "Sales Order Quantity" 										as "Sales Order Gross Revenue Amount",                        
+                          
+
+
+						// ----------------------------------------------
+                        // EX VAT
+                        // ----------------------------------------------
+                        
+						  "Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity" 									as "Sales Order Amount in SEK ex VAT",                          
+                          ("Sales Order Voucher Value SEK Ex VAT" + "Sales Order Discount Value SEK Ex VAT")				as "Sales Order Discount Amount in SEK ex VAT",  
+                          
+                          "Sales Order Voucher Value SEK Ex VAT"						 									as "Sales Order Voucher Value SEK Ex VAT",
+                          "Sales Order Discount Value SEK Ex VAT"						 									as "Sales Order Discount Value SEK Ex VAT",
+                          
+                          
+						// ----------------------------------------------
+                        // FORGEIGN CURRENCY
+                        // ----------------------------------------------
+                          
+                          Round((("Sales Order Discount Value FC")
+                          /
+                          (
+                          	("Sales Order Voucher Value FC" + "Sales Order Discount Value FC")+
+                            "Sales Order Base Price FC Ex VAT" * "Sales Order Quantity"
+                          )),0.05)																							as "Sales Discount Percentage On Site",                          
+                          
+                          "Sales Order Base Price FC" * "Sales Order Quantity"												as "Sales Order Base Price FC",
+                          "Sales Order Actual Price FC" * "Sales Order Quantity"											as "Sales Order Actual Price FC",
+                          "Sales Order Voucher Value FC"																	as "Sales Order Voucher Value FC",
+                          "Sales Order Discount Value FC"																	as "Sales Order Discount Value FC",
+                          "Sales Order Base Price FC Ex VAT" * "Sales Order Quantity"										as "Sales Order Base Price FC Ex VAT",
+                          "Sales Order Actual Price FC Ex VAT" * "Sales Order Quantity"										as "Sales Order Actual Price FC Ex VAT",
+                          "Sales Order Voucher Value FC Ex VAT"																as "Sales Order Voucher Value FC Ex VAT",
+                          "Sales Order Discount Value FC Ex VAT"															as "Sales Order Discount Value FC Ex VAT",
+                          
+                                  
+						// ----------------------------------------------
+                        // COGS calculation
+                        // ----------------------------------------------
+
+                           (
+                            if("Sales Order Brand Business Model" = 'Own Buy',
+                                // TRUE
+                                ApplyMap('Map_Cost_Price', "Item Netsuite Id",null())* "Sales Order Quantity",
+                                // FALSE
+                                0)
+                           )
+
+                           +
+
+                              // =========================================================
+                              //	Calculate Gross Customs Fee
+                              // =========================================================
+
+
+
+                              if("Sales Order Delivery Country"='no',
+                                  // IF TRUE
+                                      if(ApplyMap('Map_Main_Category', "Item Netsuite Id",null())='Shoes',
+                                      // IF TRUE
+                                      0,
+                                      // IF FALSE
+                                          if(ApplyMap('Map_Main_Category', "Item Netsuite Id",null())='Bags',
+                                          // IF TRUE
+                                          0,
+                                          // IF FALSE
+                                          (0.093 * "Sales Order Actual Price SEK Ex VAT") * "Sales Order Quantity"
+                                            ))
+                                      ,0)      
+
+                           +
+
+                              // =========================================================
+                              //	Calculate Gross Cogs Consignment
+                              // =========================================================
+
+                              if("Sales Order Brand Business Model" = 'Consignment'
+                                  // IF TRUE
+                                  ,if("Sales Order Delivery Country"='se' or //sweden
+                                      "Sales Order Delivery Country"='dk' or //denmark
+                                      "Sales Order Delivery Country"='fi' or //finland
+                                      "Sales Order Delivery Country"='nl' or //netherlands
+                                      "Sales Order Delivery Country"='fr' or //france
+                                      "Sales Order Delivery Country"='de' or //germany
+                                      "Sales Order Delivery Country"='be' or //belgium
+                                      "Sales Order Delivery Country"='pl' or //poland
+                                      "Sales Order Delivery Country"='uk' //Great Brittan
+
+                                          //IF TRUE --> Apply General Customers Fee
+                                          ,ApplyMap('Map_Brand_Consignment_Fee', "%Brand Id",null()) *
+
+                                            ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity")
+
+                                           // IF FALSE --> Apply Norway Customs Fee
+                                          ,if("Sales Order Delivery Country"='no'
+                                                // IF TRUE
+                                                ,ApplyMap('Map_Brand_Consignment_Fee_NO', "%Brand Id",null()) *
+
+                                                    ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity")
+
+                                                // IF FALSE
+                                                ,ApplyMap('Map_Brand_Consignment_Fee_EU', "%Brand Id",null()) *
+
+                                                    ("Sales Order Actual Price SEK Ex VAT" * "Sales Order Quantity"))
+                                      )
+                                  // IF FALSE
+                                  ,0)       	as "Sales Order Gross Cost of Goods Sold" 
+								  
+				FROM $(File)
+				(qvd);
+			   end if
+
+		NEXT File
+
+
+            Concatenate (Sales)
+            LOAD
+
+                          "Item Netsuite Id",
+                          Date("Sales Order Purchase Date" + '$(vL.Days.To.Look.Back)' ,'YYYY-MM-DD') as "FactDate",
+                          Date("Sales Order Purchase Date"  + '$(vL.Days.To.Look.Back)','YYYY-MM-DD') as "Sales Order Purchase Date",
+                          "Sales Order EAN Code",
+                          "Sales Order Amount in SEK ex VAT" as "Sales Order Compare Amount in SEK ex VAT",
+                          "Sales Order Quantity" as "Sales Order Compare Quantity",
+                          "Sales Order Amount in SEK inc. Discount ex VAT" as "Sales Order Compare Amount in SEK inc. Discount ex VAT",
+
+						  "Sales Order Gross Revenue Amount" as "Sales Order Compare Gross Revenue Amount",
+                          "Sales Order Brand Consignment" as "Sales Order Brand Consignment",
+                          
+                          "Sales Order Amount in SEK inc VAT" as "Sales Order Compare Amount in SEK inc VAT",
+                          "Sales Order Amount in SEK inc. Discount inc VAT" as "Sales Order Compare Amount in SEK inc. Discount inc VAT",
+						  "Sales Order Discount Amount in SEK inc VAT" as "Sales Order Compare Discount Amount in SEK inc VAT",
+                          "Sales Order Voucher Value SEK inc VAT" as "Sales Order Compare Voucher Value SEK inc VAT",
+                          "Sales Order Discount Value SEK inc VAT" as "Sales Order Compare Discount Value SEK inc VAT",     
+                          
+                          "Sales Order Number",
+						  "Sales Order Store",                          
+                          "Sales Order Country",
+                          "Sales Order Discount Amount in SEK ex VAT" as "Sales Order Compare Discount Amount in SEK ex VAT",
+                          "Sales Order Discount Percentage" as "Sales Order Compare Discount Percentage",
+                          "Sales Order Gross Cost of Goods Sold" as "Sales Order Compare Gross Cost of Goods Sold" 
+               
+                                  
+                                  
+    
+        Resident Sales;// where "FactDate" = '<=$(TodayCurrentData)';
+        
+//         Concatenate (Sales)
+        
+//           LOAD
+//               "Sales Order Purchase Date",
+//               "Sales Order Purchase Date" as "FactDate",
+//               "Events",
+//               "Boozt Forecast",
+//               "Booztlet Forecast",
+//               "ECCO Forecast",
+//               "DAY Forecast"
+//           FROM [lib://Google Drive/B&M\Daily Sales Forecast\Forecast.xlsx]
+//           (ooxml, embedded labels, table is Sheet1);
+
+
+
+
+
+
