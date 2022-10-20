@@ -1,5 +1,4 @@
 ///$tab ======================
-
 ///$tab Main
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // main
@@ -374,7 +373,6 @@ end if
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///$tab ======================
-
 ///$tab var_DB_output_ty
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // var_DB_output_ty
@@ -447,7 +445,6 @@ Concatenate(global_variables_db_output) load
 resident variables_db_output;
 drop table variables_db_output;
 ///$tab ======================
-
 ///$tab bnm_mapping
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // bnm_mapping
@@ -480,11 +477,8 @@ drop table variables_db_output;
 
 		map_startable_key: mapping load "Item SKU", "StarTable Key ItemTable" FROM [lib://BnM/2.QVD/Items/StarTableKey_extended.qvd] (qvd);
 ///$tab ======================
-
 ///$tab ux_tables
-
 ///$tab ======================
-
 ///$tab items (NF)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // items
@@ -754,8 +748,6 @@ LOAD
     "Discount Seasons"
 FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
 (qvd);
-
-
 ///$tab sales_p1
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sales_p1
@@ -996,7 +988,6 @@ FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
 	RESIDENT sales_table_cv_p1
     WHERE transaction_date >= '$(vl_lastappdatetoload_YYYY_MM_DD)';
     DROP TABLE sales_table_cv_p1;
-
 ///$tab sales_cv_p3
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sales_cv_p3
@@ -1068,7 +1059,6 @@ FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
             
             	CONCATENATE (sales_table) LOAD * RESIDENT sales_table_cv_p3; DROP TABLE sales_table_cv_p3;
 ///$tab ======================
-
 ///$tab ux_period_select
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ux_time_select
@@ -1085,7 +1075,6 @@ FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
         transaction_date			AS ux_period_two
 	RESIDENT sales_table;
 ///$tab ======================
-
 ///$tab exit
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // exit
@@ -1385,9 +1374,7 @@ FROM [lib://BnM/2.QVD/Discounts/ItemDiscounts_OneQuarter.qvd]
 //               "DAY Forecast"
 //           FROM [lib://Google Drive/B&M\Daily Sales Forecast\Forecast.xlsx]
 //           (ooxml, embedded labels, table is Sheet1);
-
-
-
-
-
-
+///$tab _gitoqlok
+/**
+** Last Updated at 10/20/2022, 10:38:43 AM: Removed test section [%_SCRIPT_%] (sandell at 10/18/2022, 12:11:57 PM)
+*/
